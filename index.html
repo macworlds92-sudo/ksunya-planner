@@ -217,7 +217,7 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .rb-x{background:var(--bg);border:none;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--text3);flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .rb-acts{display:flex;gap:8px}.rb-btn{flex:1;padding:11px;border-radius:11px;border:none;font-size:13px;font-weight:600;cursor:pointer}
 .rb-btn.p{background:var(--teal);color:#fff}.rb-btn.s{background:var(--bg);color:var(--text2)}
-.vfab{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);right:16px;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#E24B4A,#FF6B35);border:none;box-shadow:0 4px 24px rgba(226,75,74,.45);z-index:36;cursor:pointer;font-size:28px;color:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .25s,transform .2s;}
+.vfab{display:none;position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);right:16px;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#E24B4A,#FF6B35);border:none;box-shadow:0 4px 24px rgba(226,75,74,.45);z-index:36;cursor:pointer;font-size:28px;color:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .25s,transform .2s;}
 .vfab.listening{animation:vfp 1.2s ease-in-out infinite}
 @keyframes vfp{0%,100%{transform:scale(1);box-shadow:0 4px 24px rgba(226,75,74,.45)}50%{transform:scale(1.18);box-shadow:0 6px 32px rgba(226,75,74,.72)}}
 #vov{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;visibility:hidden;}
@@ -2118,6 +2118,7 @@ try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('
 try{initSwipes();dbgOk('Swipes ready');}catch(e){dbgErr('Swipes: '+e.message);}
 try{initTooltips();dbgOk('Tooltips ready');}catch(e){dbgErr('Tooltips: '+e.message);}
 try{initFABManager();dbgOk('FAB ready');}catch(e){dbgErr('FAB: '+e.message);}
+try{applyVoiceFAB();}catch(e){}
 dbgOk('App ready ✓');
 try{scheduleDailyNotif();}catch(e){}
 setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
