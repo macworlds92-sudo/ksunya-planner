@@ -293,6 +293,16 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .date-chip-wrap input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px}
 .ch-d.clickable{cursor:pointer;transition:background .15s}
 .ch-d.clickable:active{background:#FDEDED;color:#992020}
+
+/* ── QUICK TAG PICKER ── */
+#tag-picker{position:fixed;z-index:200;background:var(--card);border-radius:16px;padding:12px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;flex-direction:column;gap:8px;min-width:180px;}
+#tag-picker.show{display:flex;}
+.tag-picker-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+.tag-picker-opts{display:flex;flex-wrap:wrap;gap:6px;}
+.tag-picker-opt{padding:5px 12px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+.tag-picker-opt:active{opacity:.7;}
+#tag-picker-bg{position:fixed;inset:0;z-index:199;display:none;}
+#tag-picker-bg.show{display:block;}
 </style>
 </head>
 <body>
@@ -584,6 +594,7 @@ const prioFull={h:'Высокий',mid:'Средний',l:'Низкий'};
 
 // ── STATE ──
 let apiKey='',curV='today',editId=null,tasks=[];
+let showVoiceFAB=false; // hidden by default
 let searchQ='',searchOpen=false,drFrom='',drTo='',lpTimer=null;
 // Chats
 let chats=[]; // [{id,name,created,updated,history:[]}]
@@ -667,7 +678,7 @@ function init(){
 
 // ── SETTINGS ──
 function openSett(){
-  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш (если не работает)\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n\nНомер:');
+  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n\nНомер:');
   if(r==='0'){
     if(confirm('Удалить кеш и перезагрузить?')){
       if('serviceWorker' in navigator){
@@ -684,6 +695,7 @@ function openSett(){
     else if(r==='1'){const k=prompt('API ключ Anthropic:',apiKey);if(k&&k.trim()){apiKey=k.trim();tryLS(()=>localStorage.setItem('mk_key',apiKey));alert('Сохранено ✓');}}
   else if(r==='2'){tryLS(()=>localStorage.removeItem('mk_ob'));showOb();}
   else if(r==='3'){if(confirm('Сбросить все задачи?')){tasks=initTasks();saveData();render();}}  else if(r==='5'){closeChoice&&closeChoice();openRemindSett();}
+    else if(r==='6'){toggleVoiceFAB();}
   else if(r==='4'){const t=prompt('Токен сообщества ВКонтакте:\n(Группа → Управление → Работа с API → Ключи доступа):\n',vkToken||'');if(t!==null){vkToken=t.trim();tryLS(()=>localStorage.setItem('mk_vk_token',vkToken));vkSnap=null;alert(vkToken?'VK токен сохранён ✓':'VK токен удалён');}}
 }
 
@@ -786,8 +798,8 @@ function tcHTML(t,q=''){
       <div class="tb">
         <div class="tt"><span class="num-chip">[No ${t.num||'?'}]</span>${hl(t.title,q)}</div>
         <div class="tm">
-          <span class="ch ${catCls[t.cat]}">${catN[t.cat]}</span>
-          <span class="ch ${prioCls[t.prio]}">${prioN[t.prio]}</span>
+          <span class="ch ${catCls[t.cat]}" style="cursor:pointer" onclick="event.stopPropagation();openTagPicker(${t.id},'cat',this)">${catN[t.cat]}</span>
+          <span class="ch ${prioCls[t.prio]}" style="cursor:pointer" onclick="event.stopPropagation();openTagPicker(${t.id},'prio',this)">${prioN[t.prio]}</span>
           ${t.date?`<span class="date-chip-wrap"><span class="ch ch-d${ov?' ov':''} clickable">📅 ${dStr}${ov?' · просрочено':''}</span><input type="date" value="${t.date}" onchange="quickDate(${t.id},this.value)" onclick="event.stopPropagation()"></span>`:''}
         </div>
         ${st?`<div class="sp"><div class="sb"><div class="sf" style="width:${pct}%"></div></div><div class="st2">${sd}/${st}</div></div>
@@ -1782,6 +1794,40 @@ function applyUpdate(){window.location.reload();}
 dbgOk('SW disabled — loading from network directly');
 
 
+
+// ── QUICK TAG PICKER ──
+let _tpTaskId=null,_tpMode=null;
+const CAT_OPTS=[{v:'k',l:'🥩 Колбаса',cls:'ck-k'},{v:'a',l:'🐾 Лакомства',cls:'ck-a'},{v:'b',l:'💼 Битрикс',cls:'ck-b'},{v:'m',l:'📱 Маркетинг',cls:'ck-m'}];
+const PRIO_OPTS=[{v:'h',l:'🔴 Высокий',cls:'ch-h'},{v:'mid',l:'🟡 Средний',cls:'ch-m'},{v:'l',l:'🟢 Низкий',cls:'ch-l'}];
+function openTagPicker(id,mode,el){
+  _tpTaskId=id;_tpMode=mode;
+  const picker=document.getElementById('tag-picker');
+  const bg=document.getElementById('tag-picker-bg');
+  const t=tasks.find(x=>x.id===id);if(!t||!picker)return;
+  document.getElementById('tp-title').textContent=mode==='cat'?'Категория':'Приоритет';
+  const opts=mode==='cat'?CAT_OPTS:PRIO_OPTS;
+  const cur=mode==='cat'?t.cat:t.prio;
+  document.getElementById('tp-opts').innerHTML=opts.map(o=>
+    `<button class="tag-picker-opt ${o.cls}" style="${cur===o.v?'outline:2.5px solid var(--teal);':''}" onclick="applyTag('${o.v}')">${o.l}</button>`
+  ).join('');
+  const r=el.getBoundingClientRect(),W=window.innerWidth,H=window.innerHeight;
+  picker.style.left=Math.min(r.left,W-195)+'px';
+  picker.style.top=(r.bottom+8)+'px';
+  if(r.bottom+160>H)picker.style.top=(r.top-160)+'px';
+  picker.classList.add('show');bg.classList.add('show');
+}
+function applyTag(val){
+  const t=tasks.find(x=>x.id===_tpTaskId);if(!t)return;
+  if(_tpMode==='cat')t.cat=val;else t.prio=val;
+  saveData();render();closeTagPicker();
+  toastInfo(_tpMode==='cat'?'Категория изменена':'Приоритет изменён','');
+}
+function closeTagPicker(){
+  const p=document.getElementById('tag-picker'),b=document.getElementById('tag-picker-bg');
+  if(p)p.classList.remove('show');if(b)b.classList.remove('show');
+  _tpTaskId=null;_tpMode=null;
+}
+
 // ── VK API ──
 let vkToken = '';
 const VK_GID = '238718596';
@@ -1790,6 +1836,19 @@ let vkSnapTime = 0;
 
 function loadVKSettings() {
   vkToken = tryLS(() => localStorage.getItem('mk_vk_token') || '', '');
+  showVoiceFAB = tryLS(() => localStorage.getItem('mk_voice') === '1', false);
+  applyVoiceFAB();
+}
+function applyVoiceFAB() {
+  const fab = document.getElementById('vfab');
+  if (!fab) return;
+  fab.style.display = showVoiceFAB ? 'flex' : 'none';
+}
+function toggleVoiceFAB() {
+  showVoiceFAB = !showVoiceFAB;
+  tryLS(() => localStorage.setItem('mk_voice', showVoiceFAB ? '1' : '0'));
+  applyVoiceFAB();
+  toastInfo(showVoiceFAB ? '🎤 Голосовой помощник включён' : '🎤 Голосовой помощник скрыт', '');
 }
 
 async function vkAPI(method, params) {
@@ -2125,6 +2184,14 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 <div id="status-bar"><div class="sb-fill" id="sb-fill"></div></div>
 <div id="toast-wrap"></div>
 <div id="g-tip"></div>
+
+
+<!-- Tag Picker -->
+<div id="tag-picker-bg" onclick="closeTagPicker()"></div>
+<div id="tag-picker">
+  <div class="tag-picker-title" id="tp-title">Категория</div>
+  <div class="tag-picker-opts" id="tp-opts"></div>
+</div>
 
 </body>
 </html>
