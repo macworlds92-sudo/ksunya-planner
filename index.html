@@ -1612,10 +1612,10 @@ function initViewport(){
 function initFABManager(){
   const fab=document.getElementById('vfab');if(!fab)return;
   const check=()=>{
+    if(!showVoiceFAB)return; // Don't touch hidden FAB
     const anyOvOpen=document.querySelector('.obg.op');
     const anyScreenOpen=['chat-screen','links-screen','inbox-screen']
       .some(id=>document.getElementById(id)?.classList.contains('open'));
-    const vovOpen=document.getElementById('vov')?.classList.contains('open');
     fab.style.opacity=(anyOvOpen||anyScreenOpen)?'0':'1';
     fab.style.pointerEvents=(anyOvOpen||anyScreenOpen)?'none':'all';
   };
@@ -1842,7 +1842,7 @@ function loadVKSettings() {
 function applyVoiceFAB() {
   const fab = document.getElementById('vfab');
   if (!fab) return;
-  fab.style.display = showVoiceFAB ? 'flex' : 'none';
+  fab.style.setProperty('display', showVoiceFAB ? 'flex' : 'none', 'important');
 }
 function toggleVoiceFAB() {
   showVoiceFAB = !showVoiceFAB;
@@ -2160,7 +2160,7 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 </div>
 
 <!-- Voice FAB -->
-<button class="vfab" id="vfab" onclick="toggleVoice()">🎤</button>
+<button class="vfab" id="vfab" onclick="toggleVoice()" style="display:none">🎤</button>
 
 <!-- Voice Overlay -->
 <div id="vov">
