@@ -15,10 +15,10 @@
 @media(prefers-color-scheme:dark){:root{--bg:#1C1C1E;--card:#2C2C2E;--text:#FFFFFF;--text2:#EBEBF5;--text3:#8E8E93;--border:#48484A;--border2:#38383A;--teal-l:#0D3B2E;--teal-d:#5FD4A8;}}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 button,input,select,textarea{font-family:inherit}button{cursor:pointer}
-html{height:100%;overflow:hidden;background:#1C1C1E;}
-@media(prefers-color-scheme:light){html{background:#F2F2F7;}}
+html{height:100%;overflow:hidden;background:var(--card,#2C2C2E);}
+
 body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;-webkit-font-smoothing:antialiased;background:var(--bg);color:var(--text);}
-#wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+#wrap{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);position:relative;}
 #hdr{flex-shrink:0;background:var(--card);border-bottom:0.5px solid var(--border2);padding:calc(env(safe-area-inset-top,44px) + 4px) 16px 10px;}
 .hdr-main{display:flex;align-items:center;justify-content:space-between;}
 .ht{font-size:17px;font-weight:700;color:var(--text)}.hs{font-size:12px;color:var(--text3);margin-top:1px}
@@ -29,12 +29,12 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 #search-bar.open{max-height:56px;padding:0 14px 10px}
 .search-wrap{display:flex;gap:8px;align-items:center;background:var(--bg);border-radius:12px;padding:8px 12px}
 .search-inp{flex:1;border:none;background:transparent;font-size:16px;color:var(--text);outline:none}
-#main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 60px);}
-#nav{flex-shrink:0;background:var(--card);border-top:0.5px solid var(--border2);padding:3px 0;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 4px);display:flex;}
-.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:2px 0;background:none;border:none;color:var(--text3);font-size:10px;font-weight:500;cursor:pointer;user-select:none;}
-.nb.on{color:var(--teal)}.ni{font-size:20px;line-height:1}
-.nadd{flex:0;padding:0 8px;display:flex;align-items:center}
-.ac{width:44px;height:44px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;border:none;margin-top:-10px;box-shadow:0 4px 16px rgba(29,158,117,.4);cursor:pointer;}
+#main{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px;padding-bottom:80px;}
+#nav{flex-shrink:0;background:var(--card);border-top:0.5px solid var(--border2);display:flex;align-items:flex-start;}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 0;background:none;border:none;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;user-select:none;}
+.nb.on{color:var(--teal)}.ni{font-size:26px;line-height:1}
+.nadd{flex:0;padding:0 8px;display:flex;align-items:center;}
+.ac{width:52px;height:52px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center;color:#fff;font-size:28px;border:none;margin-top:-6px;box-shadow:0 4px 16px rgba(29,158,117,.4);cursor:pointer;}
 .pc{background:var(--card);border-radius:16px;padding:14px;margin-bottom:10px}
 .pt{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .pl{font-size:14px;font-weight:600;color:var(--text)}.pp{font-size:15px;font-weight:700;color:var(--teal)}
@@ -208,8 +208,8 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .tog::after{content:'';position:absolute;top:3px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.3);transition:left .25s}.tog.on::after{left:23px}.tog.off::after{left:3px}
 .rem-stat{background:var(--teal);color:#fff;border-radius:14px;padding:14px;margin-bottom:14px;font-size:13px;line-height:2}.rem-stat b{color:#fff;font-weight:800}
 .time-in{border:1.5px solid var(--border2);border-radius:10px;padding:7px 10px;font-size:15px;background:var(--bg);color:var(--teal);outline:none;cursor:pointer}
-#rem-banner{position:fixed;top:calc(env(safe-area-inset-top,44px) + 58px);left:12px;right:12px;z-index:45;background:var(--card);border-radius:18px;box-shadow:0 6px 28px rgba(0,0,0,.28);transform:translateY(-160px);transition:transform .45s cubic-bezier(.34,1.56,.64,1);overflow:hidden;pointer-events:none;}
-#rem-banner.show{transform:translateY(0);pointer-events:all}
+#rem-banner{position:fixed;top:calc(env(safe-area-inset-top,44px) + 58px);left:12px;right:12px;z-index:45;background:var(--card);border-radius:18px;box-shadow:0 6px 28px rgba(0,0,0,.28);transform:translateY(-200px);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .4s;overflow:hidden;pointer-events:none;visibility:hidden;}
+#rem-banner.show{transform:translateY(0);opacity:1;pointer-events:all;visibility:visible;}
 .rb-strip{height:5px}.rb-body{padding:14px 16px}
 .rb-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
 .rb-ico{font-size:28px;flex-shrink:0;margin-top:1px}.rb-info{flex:1;min-width:0}
@@ -217,7 +217,7 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .rb-x{background:var(--bg);border:none;width:28px;height:28px;border-radius:50%;font-size:14px;cursor:pointer;color:var(--text3);flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .rb-acts{display:flex;gap:8px}.rb-btn{flex:1;padding:11px;border-radius:11px;border:none;font-size:13px;font-weight:600;cursor:pointer}
 .rb-btn.p{background:var(--teal);color:#fff}.rb-btn.s{background:var(--bg);color:var(--text2)}
-.vfab{position:fixed;bottom:calc(env(safe-area-inset-bottom,34px) + 72px);right:16px;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#E24B4A,#FF6B35);border:none;box-shadow:0 4px 24px rgba(226,75,74,.45);z-index:36;cursor:pointer;font-size:28px;color:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .25s,transform .2s;}
+.vfab{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 76px);right:16px;width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#E24B4A,#FF6B35);border:none;box-shadow:0 4px 24px rgba(226,75,74,.45);z-index:36;cursor:pointer;font-size:28px;color:#fff;display:flex;align-items:center;justify-content:center;transition:opacity .25s,transform .2s;}
 .vfab.listening{animation:vfp 1.2s ease-in-out infinite}
 @keyframes vfp{0%,100%{transform:scale(1);box-shadow:0 4px 24px rgba(226,75,74,.45)}50%{transform:scale(1.18);box-shadow:0 6px 32px rgba(226,75,74,.72)}}
 #vov{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none;visibility:hidden;}
@@ -330,6 +330,7 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
     <button class="nb" id="nb-analytics" onclick="sv('analytics')" data-tip-title="📊 Итоги" data-tip="Прогресс по задачам, разбивка по категориям, советы где искать клиентов."><span class="ni">📊</span>Итоги</button>
   </div>
 </div>
+<div style="flex-shrink:0;background:var(--card);height:env(safe-area-inset-bottom,0px);min-height:0;width:100%;"></div>
 
 <!-- Full-screen Chats -->
 <div id="chat-screen">
@@ -1395,15 +1396,17 @@ function testNotif() {
 
 // In-app reminder banner
 function showRemind({ icon, color, title, sub, btns }) {
+  const banner = document.getElementById('rem-banner');
+  if(!banner) return;
   document.getElementById('rb-ico').textContent = icon;
   document.getElementById('rb-strip').style.background = color;
   document.getElementById('rb-title').textContent = title;
   document.getElementById('rb-sub').textContent = sub;
+  window._remBtns = btns;
   document.getElementById('rb-acts').innerHTML = btns.map((b, i) =>
-    `<button class="rb-btn ${b.p?'p':'s'}" onclick="_rb${i}()">${b.l}</button>`
+    `<button class="rb-btn ${b.p?'p':'s'}" onclick="window._remBtns[${i}].f();closeRemind()">${b.l}</button>`
   ).join('');
-  btns.forEach((b, i) => window['_rb'+i] = b.f);
-  document.getElementById('rem-banner').classList.add('show');
+  banner.classList.add('show');
 }
 function closeRemind() {
   document.getElementById('rem-banner').classList.remove('show');
@@ -1863,8 +1866,15 @@ function toggleVoice() {
 
 function openVoice() {
   loadVKSettings();
+  voiceSt = 'idle';
+  stopRecog();
+  if(window.speechSynthesis) try{speechSynthesis.cancel();}catch(e){}
   document.getElementById('vov').classList.add('open');
   document.getElementById('vfab').textContent = '✕';
+  document.getElementById('vov-mic').textContent = '🎤';
+  document.getElementById('vov-mic').classList.remove('listening');
+  document.getElementById('vov-hint').textContent = 'Нажми и говори';
+  document.getElementById('vov-wave').style.display = 'none';
   setVovTr('Нажмите 🎤 и говорите');
   document.getElementById('vov-resp').style.display = 'none';
   document.getElementById('vov-acts').innerHTML = '';
