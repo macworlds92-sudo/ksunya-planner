@@ -400,11 +400,15 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .move-sub-title{font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
-  firebase.initializeApp({ databaseURL: 'https://ksunya-planner-default-rtdb.europe-west1.firebasedatabase.app' });
-  window.fbDb = firebase.database();
+  try {
+    window.sbClient = supabase.createClient('https://fywikdfxisrfqtpmntxf.supabase.co', 'sb_publishable_SroaFpghY5bRtGgNNoBlJA_D3qQg5Rh');
+    console.log('Supabase ready');
+  } catch(e) {
+    window.sbClient = null;
+    console.log('Supabase init error:', e.message);
+  }
 </script>
 </head>
 <body>
@@ -796,7 +800,7 @@ function init(){
 
 // ── SETTINGS ──
 function openSett(){
-  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n7 — 🔄 Синхронизация'+(ghToken?' ✓':'')+'\n\nНомер:');
+  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n7 — 🔄 Синхронизация'+(fbSyncKey?' 🟢':'')+'\n8 — 🏷 Мои категории\n\nНомер:');
   if(r==='0'){
     if(confirm('Удалить кеш и перезагрузить?')){
       if('serviceWorker' in navigator){
@@ -1974,15 +1978,15 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
-// ── FIREBASE REALTIME SYNC ──
-const FB_PATH = 'ksunya-planner';
-let fbSyncKey = '';
-let _fbListener = null;
-let _fbIgnoreNext = false;
+// ── SUPABASE REALTIME SYNC ──
+const SB_TABLE = 'sync_data';
+let sbSyncKey = '';
+let _sbChannel = null;
+let _sbIgnoreNext = false;
 
 function loadSyncSettings() {
-  fbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
-  if (fbSyncKey) setTimeout(startFirebaseSync, 1000);
+  sbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
+  if (sbSyncKey) setTimeout(startSupabaseSync, 1000);
 }
 
 function setSyncStatus(state, msg) {
@@ -1999,33 +2003,41 @@ function setSyncStatus(state, msg) {
   }
 }
 
-function fbSave() {
-  if (!fbSyncKey || !window.fbDb) return;
-  _fbIgnoreNext = true;
+async function sbSave() {
+  if (!sbSyncKey || !window.sbClient) return;
+  _sbIgnoreNext = true;
+  const now = Date.now();
   const data = {
     tasks: tasks.map(t => ({...t, aiH: []})),
     links: quickLinks,
     customCats: customCats,
-    savedAt: Date.now()
+    savedAt: now
   };
-  tryLS(() => localStorage.setItem('mk_saved_at', data.savedAt));
-  window.fbDb.ref(FB_PATH + '/' + fbSyncKey).set(data)
-    .then(() => { setSyncStatus('ok', '🟢 Сохранено'); setTimeout(()=>_fbIgnoreNext=false, 600); })
-    .catch(e => { setSyncStatus('err', '✗ Ошибка'); _fbIgnoreNext=false; });
+  tryLS(() => localStorage.setItem('mk_saved_at', now));
+  try {
+    const { error } = await window.sbClient
+      .from(SB_TABLE)
+      .upsert({ key: sbSyncKey, data, updated_at: new Date().toISOString() });
+    if (error) throw error;
+    setSyncStatus('ok', '🟢 Сохранено');
+    setTimeout(() => { _sbIgnoreNext = false; }, 1000);
+  } catch(e) {
+    setSyncStatus('err', '✗ ' + e.message);
+    _sbIgnoreNext = false;
+  }
 }
 
-function startFirebaseSync() {
-  if (!fbSyncKey || !window.fbDb) return;
-  if (_fbListener) {
-    window.fbDb.ref(FB_PATH + '/' + fbSyncKey).off('value', _fbListener);
-  }
-  setSyncStatus('busy', '🔄 Подключение...');
-  const ref = window.fbDb.ref(FB_PATH + '/' + fbSyncKey);
-  _fbListener = ref.on('value', snap => {
-    if (_fbIgnoreNext) { return; }
-    const remote = snap.val();
-    setSyncStatus('ok', '🟢 Онлайн');
-    if (!remote) { fbSave(); return; }
+async function sbLoad(silent) {
+  if (!sbSyncKey || !window.sbClient) return;
+  if (!silent) setSyncStatus('busy', '🔄 Загрузка...');
+  try {
+    const { data: row, error } = await window.sbClient
+      .from(SB_TABLE)
+      .select('data')
+      .eq('key', sbSyncKey)
+      .single();
+    if (error || !row) { if (!silent) setSyncStatus('ok', '🟢 Нет данных'); return; }
+    const remote = row.data;
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
     if (remote.savedAt > localTime + 500) {
       window._noSyncSave = true;
@@ -2036,47 +2048,96 @@ function startFirebaseSync() {
       tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
       window._noSyncSave = false;
-      toastInfo('Синхронизация', String.fromCharCode(8595) + ' Данные обновлены');
+      if (!silent) toastInfo('Синхронизация', String.fromCharCode(8595) + ' Данные загружены');
     }
-  }, err => setSyncStatus('err', '✗ ' + err.code));
+    setSyncStatus('ok', '🟢 Онлайн');
+  } catch(e) {
+    setSyncStatus('err', '✗ ' + e.message);
+  }
 }
 
-function stopFirebaseSync() {
-  if (_fbListener && window.fbDb && fbSyncKey) {
-    window.fbDb.ref(FB_PATH + '/' + fbSyncKey).off('value', _fbListener);
-    _fbListener = null;
+function startSupabaseSync() {
+  if (!sbSyncKey || !window.sbClient) {
+    setSyncStatus('err', 'Supabase недоступен');
+    return;
+  }
+  // Load current data first
+  sbLoad(false);
+
+  // Subscribe to realtime changes
+  if (_sbChannel) window.sbClient.removeChannel(_sbChannel);
+  
+  _sbChannel = window.sbClient
+    .channel('sync-' + sbSyncKey)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: SB_TABLE,
+      filter: 'key=eq.' + sbSyncKey
+    }, payload => {
+      if (_sbIgnoreNext) { _sbIgnoreNext = false; return; }
+      const remote = payload.new?.data;
+      if (!remote) return;
+      const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
+      if (remote.savedAt > localTime + 500) {
+        window._noSyncSave = true;
+        tasks = remote.tasks || tasks;
+        tasks.forEach(t => { if(!t.aiH) t.aiH=[]; });
+        if (remote.links) quickLinks = remote.links;
+        if (remote.customCats) customCats = remote.customCats;
+        tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
+        render();
+        window._noSyncSave = false;
+        setSyncStatus('ok', '🟢 Обновлено');
+        toastInfo('Синхронизация', String.fromCharCode(8595) + ' Данные обновлены в реальном времени');
+      }
+    })
+    .subscribe(status => {
+      if (status === 'SUBSCRIBED') setSyncStatus('ok', '🟢 Онлайн');
+      if (status === 'CHANNEL_ERROR') setSyncStatus('err', '✗ Ошибка соединения');
+    });
+}
+
+function stopSupabaseSync() {
+  if (_sbChannel && window.sbClient) {
+    window.sbClient.removeChannel(_sbChannel);
+    _sbChannel = null;
   }
 }
 
 async function openSyncSett() {
-  const status = fbSyncKey ? '🟢 Ключ: ' + fbSyncKey : 'Не настроено';
-  const action = prompt('Синхронизация Firebase\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Отключить\n\nНомер:');
+  const status = sbSyncKey ? '🟢 Ключ: ' + sbSyncKey : 'Не настроено';
+  const action = prompt('Синхронизация (Supabase)\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Загрузить с сервера\n4 - Отключить\n\nНомер:');
   if (action === '1') {
-    const key = prompt('Придумай ключ (любое слово, одинаковое на всех устройствах):\nНапример: mamina-kolbasa-2026', fbSyncKey);
-    if (key && key.trim().length >= 4) {
-      stopFirebaseSync();
-      fbSyncKey = key.trim().replace(/[.#$[\]]/g, '-');
-      tryLS(() => localStorage.setItem('mk_fb_key', fbSyncKey));
-      startFirebaseSync();
-      toastSuccess('Ключ установлен!', 'Синхронизация запущена');
+    const key = prompt('Ключ синхронизации (одинаковый на всех устройствах):\nНапример: mamina-kolbasa', sbSyncKey);
+    if (key && key.trim().length >= 3) {
+      stopSupabaseSync();
+      sbSyncKey = key.trim().replace(/[^a-zA-Z0-9а-яА-Я-_]/g, '-');
+      tryLS(() => localStorage.setItem('mk_fb_key', sbSyncKey));
+      startSupabaseSync();
+      toastSuccess('Ключ установлен!', '🟢 Реалтайм синхронизация запущена');
     } else if (key !== null) {
-      alert('Минимум 4 символа');
+      alert('Минимум 3 символа');
     }
   } else if (action === '2') {
-    if (!fbSyncKey) { toastError('Сначала установи ключ', ''); return; }
-    fbSave();
+    if (!sbSyncKey) { toastError('Сначала установи ключ', ''); return; }
+    await sbSave();
   } else if (action === '3') {
-    stopFirebaseSync();
-    fbSyncKey = '';
+    if (!sbSyncKey) { toastError('Сначала установи ключ', ''); return; }
+    await sbLoad(false);
+  } else if (action === '4') {
+    stopSupabaseSync();
+    sbSyncKey = '';
     tryLS(() => localStorage.removeItem('mk_fb_key'));
     toastInfo('Синхронизация отключена', '');
+    document.getElementById('sync-bar')?.classList.remove('show');
   }
 }
 
 function scheduleSync() {
   if (window._noSyncSave) return;
   clearTimeout(window._syncTimer);
-  window._syncTimer = setTimeout(() => { if(fbSyncKey) fbSave(); }, 1000);
+  window._syncTimer = setTimeout(() => { if(sbSyncKey) sbSave(); }, 1000);
 }
 
 // ── QUICK TAG PICKER ──
@@ -2777,7 +2838,7 @@ function speakText(text) {
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
 try{loadCats();}catch(e){}
-try{loadSyncSettings();}catch(e){}
+try{loadSyncSettings();}catch(e){dbgErr('Sync init: '+e.message);}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
 try{initSwipes();dbgOk('Swipes ready');}catch(e){dbgErr('Swipes: '+e.message);}
