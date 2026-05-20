@@ -1795,6 +1795,143 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
+// ── GITHUB GIST SYNC ──
+let ghToken = '';
+let ghGistId = '';
+let _syncTimer = null;
+const GIST_FILE = 'ksunya-planner.json';
+
+function loadSyncSettings() {
+  ghToken = tryLS(() => localStorage.getItem('mk_gh_token') || '', '');
+  ghGistId = tryLS(() => localStorage.getItem('mk_gh_gist') || '', '');
+}
+
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-lbl');
+  const bar = document.getElementById('sync-bar');
+  if (!dot || !lbl || !bar) return;
+  dot.className = 'sync-bar-dot ' + state;
+  lbl.textContent = msg;
+  bar.classList.add('show');
+  clearTimeout(window._syncBarTimer);
+  if (state !== 'busy') {
+    window._syncBarTimer = setTimeout(() => bar.classList.remove('show'), 3000);
+  }
+}
+
+async function syncSave() {
+  if (!ghToken) return;
+  setSyncStatus('busy', 'Сохраняю...');
+  const data = {
+    tasks: tasks.map(t => ({...t, aiH: []})),
+    links: quickLinks,
+    savedAt: Date.now()
+  };
+  try {
+    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data) } } };
+    let res;
+    if (ghGistId) {
+      res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, description: '❤️ Ксюша — Планнер', public: false })
+      });
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    ghGistId = d.id;
+    tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
+    setSyncStatus('ok', '✓ Синхронизировано');
+  } catch(e) {
+    setSyncStatus('err', '✗ Ошибка синхронизации');
+    console.log('Sync error:', e.message);
+  }
+}
+
+async function syncLoad() {
+  if (!ghToken || !ghGistId) return false;
+  setSyncStatus('busy', 'Загружаю...');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
+      headers: { 'Authorization': `token ${ghToken}` }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    const content = d.files[GIST_FILE]?.content;
+    if (!content) throw new Error('Файл не найден');
+    const remote = JSON.parse(content);
+    
+    // Merge: take newer data
+    const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
+    if (remote.savedAt > localTime) {
+      tasks = remote.tasks || tasks;
+      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
+      if (remote.links) quickLinks = remote.links;
+      saveData();
+      render();
+      setSyncStatus('ok', '✓ Данные загружены');
+      toastSuccess('Синхронизация', 'Данные обновлены с другого устройства');
+      return true;
+    } else {
+      setSyncStatus('ok', '✓ Актуально');
+      return false;
+    }
+  } catch(e) {
+    setSyncStatus('err', '✗ Ошибка загрузки');
+    return false;
+  }
+}
+
+async function openSyncSett() {
+  const cur = ghToken ? '✓ Токен установлен' : 'Не настроено';
+  const action = prompt(`🔄 Синхронизация (GitHub Gist)\n\nСтатус: ${cur}\n\n1 — Ввести токен GitHub\n2 — Синхронизировать сейчас\n3 — Загрузить с другого устройства\n4 — Отключить синхронизацию\n\nНомер:`);
+  
+  if (action === '1') {
+    const tok = prompt('Токен GitHub (gist scope):\n\ngithub.com/settings/tokens → New token → ✅ gist → Generate\n\nВставь сюда:', ghToken);
+    if (tok !== null) {
+      ghToken = tok.trim();
+      ghGistId = ''; // reset gist id for new token
+      tryLS(() => localStorage.setItem('mk_gh_token', ghToken));
+      tryLS(() => localStorage.setItem('mk_gh_gist', ''));
+      if (ghToken) {
+        toastSuccess('Токен сохранён', 'Первая синхронизация...');
+        await syncSave();
+      }
+    }
+  } else if (action === '2') {
+    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
+    await syncSave();
+  } else if (action === '3') {
+    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
+    if (!ghGistId) {
+      const id = prompt('ID синхронизации (с первого устройства):');
+      if (id) { ghGistId = id.trim(); tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId)); }
+    }
+    await syncLoad();
+  } else if (action === '4') {
+    ghToken = ''; ghGistId = '';
+    tryLS(() => localStorage.removeItem('mk_gh_token'));
+    tryLS(() => localStorage.removeItem('mk_gh_gist'));
+    toastInfo('Синхронизация отключена', '');
+  }
+}
+
+// Auto-save on data change
+const _origSaveData = saveData;
+// Debounced sync after save
+function scheduleSync() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => { if(ghToken) syncSave(); }, 3000);
+}
+
+
 // ── AUTO UPDATE ──
 // Check for new version on every launch by comparing ETag/date
 (function(){
@@ -2236,141 +2373,4 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 </div>
 
 </body>
-</html
-// ── GITHUB GIST SYNC ──
-let ghToken = '';
-let ghGistId = '';
-let _syncTimer = null;
-const GIST_FILE = 'ksunya-planner.json';
-
-function loadSyncSettings() {
-  ghToken = tryLS(() => localStorage.getItem('mk_gh_token') || '', '');
-  ghGistId = tryLS(() => localStorage.getItem('mk_gh_gist') || '', '');
-}
-
-function setSyncStatus(state, msg) {
-  const dot = document.getElementById('sync-dot');
-  const lbl = document.getElementById('sync-lbl');
-  const bar = document.getElementById('sync-bar');
-  if (!dot || !lbl || !bar) return;
-  dot.className = 'sync-bar-dot ' + state;
-  lbl.textContent = msg;
-  bar.classList.add('show');
-  clearTimeout(window._syncBarTimer);
-  if (state !== 'busy') {
-    window._syncBarTimer = setTimeout(() => bar.classList.remove('show'), 3000);
-  }
-}
-
-async function syncSave() {
-  if (!ghToken) return;
-  setSyncStatus('busy', 'Сохраняю...');
-  const data = {
-    tasks: tasks.map(t => ({...t, aiH: []})),
-    links: quickLinks,
-    savedAt: Date.now()
-  };
-  try {
-    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data) } } };
-    let res;
-    if (ghGistId) {
-      res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    } else {
-      res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...body, description: '❤️ Ксюша — Планнер', public: false })
-      });
-    }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    ghGistId = d.id;
-    tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
-    setSyncStatus('ok', '✓ Синхронизировано');
-  } catch(e) {
-    setSyncStatus('err', '✗ Ошибка синхронизации');
-    console.log('Sync error:', e.message);
-  }
-}
-
-async function syncLoad() {
-  if (!ghToken || !ghGistId) return false;
-  setSyncStatus('busy', 'Загружаю...');
-  try {
-    const res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
-      headers: { 'Authorization': `token ${ghToken}` }
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    const content = d.files[GIST_FILE]?.content;
-    if (!content) throw new Error('Файл не найден');
-    const remote = JSON.parse(content);
-    
-    // Merge: take newer data
-    const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    if (remote.savedAt > localTime) {
-      tasks = remote.tasks || tasks;
-      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
-      if (remote.links) quickLinks = remote.links;
-      saveData();
-      render();
-      setSyncStatus('ok', '✓ Данные загружены');
-      toastSuccess('Синхронизация', 'Данные обновлены с другого устройства');
-      return true;
-    } else {
-      setSyncStatus('ok', '✓ Актуально');
-      return false;
-    }
-  } catch(e) {
-    setSyncStatus('err', '✗ Ошибка загрузки');
-    return false;
-  }
-}
-
-async function openSyncSett() {
-  const cur = ghToken ? '✓ Токен установлен' : 'Не настроено';
-  const action = prompt(`🔄 Синхронизация (GitHub Gist)\n\nСтатус: ${cur}\n\n1 — Ввести токен GitHub\n2 — Синхронизировать сейчас\n3 — Загрузить с другого устройства\n4 — Отключить синхронизацию\n\nНомер:`);
-  
-  if (action === '1') {
-    const tok = prompt('Токен GitHub (gist scope):\n\ngithub.com/settings/tokens → New token → ✅ gist → Generate\n\nВставь сюда:', ghToken);
-    if (tok !== null) {
-      ghToken = tok.trim();
-      ghGistId = ''; // reset gist id for new token
-      tryLS(() => localStorage.setItem('mk_gh_token', ghToken));
-      tryLS(() => localStorage.setItem('mk_gh_gist', ''));
-      if (ghToken) {
-        toastSuccess('Токен сохранён', 'Первая синхронизация...');
-        await syncSave();
-      }
-    }
-  } else if (action === '2') {
-    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
-    await syncSave();
-  } else if (action === '3') {
-    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
-    if (!ghGistId) {
-      const id = prompt('ID синхронизации (с первого устройства):');
-      if (id) { ghGistId = id.trim(); tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId)); }
-    }
-    await syncLoad();
-  } else if (action === '4') {
-    ghToken = ''; ghGistId = '';
-    tryLS(() => localStorage.removeItem('mk_gh_token'));
-    tryLS(() => localStorage.removeItem('mk_gh_gist'));
-    toastInfo('Синхронизация отключена', '');
-  }
-}
-
-// Auto-save on data change
-const _origSaveData = saveData;
-// Debounced sync after save
-function scheduleSync() {
-  clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => { if(ghToken) syncSave(); }, 3000);
-}
-
->
+</html>
