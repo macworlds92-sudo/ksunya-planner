@@ -3514,7 +3514,7 @@ function handleNavTap(view, doubleTapFn) {
   const now = Date.now();
   const last = _navTapTimes[view] || 0;
   if (now - last < 400 && curV === view) {
-    // Double tap — open form
+    /// Double tap: open form
     doubleTapFn && doubleTapFn();
     _navTapTimes[view] = 0;
   } else {
@@ -3580,7 +3580,7 @@ function initViewSwipes() {
     }
   }, {passive: true});
 }
-/ Double tap — open form
+// Double tap: open form
     doubleTapFn && doubleTapFn();
     _navTapTimes[view] = 0;
   } else {
