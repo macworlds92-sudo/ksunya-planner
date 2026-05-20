@@ -399,6 +399,13 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .move-sub-num{font-size:11px;font-weight:700;background:var(--bg);color:var(--text3);padding:2px 7px;border-radius:6px;flex-shrink:0}
 .move-sub-title{font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  firebase.initializeApp({ databaseURL: 'https://ksunya-planner-default-rtdb.europe-west1.firebasedatabase.app' });
+  window.fbDb = firebase.database();
+</script>
 </head>
 <body>
 
@@ -594,6 +601,18 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 </div>
 <script>
 
+
+
+// ── QUICK DATE ──
+function quickDate(id, newDate) {
+  const t = tasks.find(x => x.id === id);
+  if (!t || !newDate) return;
+  t.date = newDate;
+  saveData();
+  render();
+  const d = new Date(newDate + 'T12:00:00').toLocaleDateString('ru', {day:'numeric',month:'short'});
+  toastSuccess('Дедлайн изменён', '📅 ' + d);
+}
 
 // ── DEBUG SYSTEM ──
 window.__dbg = [];
@@ -1955,15 +1974,15 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
-// ── GITHUB GIST SYNC ──
-let ghToken = '';
-let ghGistId = '';
-let _syncTimer = null;
-const GIST_FILE = 'ksunya-planner.json';
+// ── FIREBASE REALTIME SYNC ──
+const FB_PATH = 'ksunya-planner';
+let fbSyncKey = '';
+let _fbListener = null;
+let _fbIgnoreNext = false;
 
 function loadSyncSettings() {
-  ghToken = tryLS(() => localStorage.getItem('mk_gh_token') || '', '');
-  ghGistId = tryLS(() => localStorage.getItem('mk_gh_gist') || '', '');
+  fbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
+  if (fbSyncKey) setTimeout(startFirebaseSync, 1000);
 }
 
 function setSyncStatus(state, msg) {
@@ -1975,162 +1994,90 @@ function setSyncStatus(state, msg) {
   lbl.textContent = msg;
   bar.classList.add('show');
   clearTimeout(window._syncBarTimer);
-  if (state !== 'busy') {
+  if (state !== 'busy' && state !== 'ok') {
     window._syncBarTimer = setTimeout(() => bar.classList.remove('show'), 3000);
   }
 }
 
-async function syncSave() {
-  if (!ghToken) return;
-  setSyncStatus('busy', 'Сохраняю...');
+function fbSave() {
+  if (!fbSyncKey || !window.fbDb) return;
+  _fbIgnoreNext = true;
   const data = {
     tasks: tasks.map(t => ({...t, aiH: []})),
     links: quickLinks,
+    customCats: customCats,
     savedAt: Date.now()
   };
-  try {
-    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data) } } };
-    let res;
-    if (ghGistId) {
-      res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-    } else {
-      res = await fetch('https://api.github.com/gists', {
-        method: 'POST',
-        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...body, description: '❤️ Ксюша — Планнер', public: false })
-      });
-    }
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    ghGistId = d.id;
-    tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
-    setSyncStatus('ok', '✓ Синхронизировано');
-  } catch(e) {
-    setSyncStatus('err', '✗ Ошибка синхронизации');
-    console.log('Sync error:', e.message);
-  }
+  tryLS(() => localStorage.setItem('mk_saved_at', data.savedAt));
+  window.fbDb.ref(FB_PATH + '/' + fbSyncKey).set(data)
+    .then(() => { setSyncStatus('ok', '🟢 Сохранено'); setTimeout(()=>_fbIgnoreNext=false, 600); })
+    .catch(e => { setSyncStatus('err', '✗ Ошибка'); _fbIgnoreNext=false; });
 }
 
-async function syncLoad() {
-  if (!ghToken || !ghGistId) return false;
-  setSyncStatus('busy', 'Загружаю...');
-  try {
-    const res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
-      headers: { 'Authorization': `token ${ghToken}` }
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const d = await res.json();
-    const content = d.files[GIST_FILE]?.content;
-    if (!content) throw new Error('Файл не найден');
-    const remote = JSON.parse(content);
-    
-    // Merge: take newer data
+function startFirebaseSync() {
+  if (!fbSyncKey || !window.fbDb) return;
+  if (_fbListener) {
+    window.fbDb.ref(FB_PATH + '/' + fbSyncKey).off('value', _fbListener);
+  }
+  setSyncStatus('busy', '🔄 Подключение...');
+  const ref = window.fbDb.ref(FB_PATH + '/' + fbSyncKey);
+  _fbListener = ref.on('value', snap => {
+    if (_fbIgnoreNext) { return; }
+    const remote = snap.val();
+    setSyncStatus('ok', '🟢 Онлайн');
+    if (!remote) { fbSave(); return; }
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    if (remote.savedAt > localTime) {
+    if (remote.savedAt > localTime + 500) {
+      window._noSyncSave = true;
       tasks = remote.tasks || tasks;
-      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
+      tasks.forEach(t => { if(!t.aiH) t.aiH=[]; });
       if (remote.links) quickLinks = remote.links;
-      saveData();
+      if (remote.customCats) customCats = remote.customCats;
+      tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
-      setSyncStatus('ok', '✓ Данные загружены');
-      toastSuccess('Синхронизация', 'Данные обновлены с другого устройства');
-      return true;
-    } else {
-      setSyncStatus('ok', '✓ Актуально');
-      return false;
+      window._noSyncSave = false;
+      toastInfo('Синхронизация', String.fromCharCode(8595) + ' Данные обновлены');
     }
-  } catch(e) {
-    setSyncStatus('err', '✗ Ошибка загрузки');
-    return false;
+  }, err => setSyncStatus('err', '✗ ' + err.code));
+}
+
+function stopFirebaseSync() {
+  if (_fbListener && window.fbDb && fbSyncKey) {
+    window.fbDb.ref(FB_PATH + '/' + fbSyncKey).off('value', _fbListener);
+    _fbListener = null;
   }
 }
 
 async function openSyncSett() {
-  const cur = ghToken ? '✓ Токен установлен' : 'Не настроено';
-  const action = prompt(`🔄 Синхронизация (GitHub Gist)\n\nСтатус: ${cur}\n\n1 — Ввести токен GitHub\n2 — Синхронизировать сейчас\n3 — Загрузить с другого устройства\n4 — Отключить синхронизацию\n\nНомер:`);
-  
+  const status = fbSyncKey ? '🟢 Ключ: ' + fbSyncKey : 'Не настроено';
+  const action = prompt('Синхронизация Firebase\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Отключить\n\nНомер:');
   if (action === '1') {
-    const tok = prompt('Токен GitHub (gist scope):\n\ngithub.com/settings/tokens → New token → ✅ gist → Generate\n\nВставь сюда:', ghToken);
-    if (tok !== null) {
-      ghToken = tok.trim();
-      ghGistId = ''; // reset gist id for new token
-      tryLS(() => localStorage.setItem('mk_gh_token', ghToken));
-      tryLS(() => localStorage.setItem('mk_gh_gist', ''));
-      if (ghToken) {
-        toastSuccess('Токен сохранён', 'Первая синхронизация...');
-        await syncSave();
-      }
+    const key = prompt('Придумай ключ (любое слово, одинаковое на всех устройствах):\nНапример: mamina-kolbasa-2026', fbSyncKey);
+    if (key && key.trim().length >= 4) {
+      stopFirebaseSync();
+      fbSyncKey = key.trim().replace(/[.#$[\]]/g, '-');
+      tryLS(() => localStorage.setItem('mk_fb_key', fbSyncKey));
+      startFirebaseSync();
+      toastSuccess('Ключ установлен!', 'Синхронизация запущена');
+    } else if (key !== null) {
+      alert('Минимум 4 символа');
     }
   } else if (action === '2') {
-    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
-    await syncSave();
+    if (!fbSyncKey) { toastError('Сначала установи ключ', ''); return; }
+    fbSave();
   } else if (action === '3') {
-    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
-    if (!ghGistId) {
-      const id = prompt('ID синхронизации (с первого устройства):');
-      if (id) { ghGistId = id.trim(); tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId)); }
-    }
-    await syncLoad();
-  } else if (action === '4') {
-    ghToken = ''; ghGistId = '';
-    tryLS(() => localStorage.removeItem('mk_gh_token'));
-    tryLS(() => localStorage.removeItem('mk_gh_gist'));
+    stopFirebaseSync();
+    fbSyncKey = '';
+    tryLS(() => localStorage.removeItem('mk_fb_key'));
     toastInfo('Синхронизация отключена', '');
   }
 }
 
-// Auto-save on data change
-const _origSaveData = saveData;
-// Debounced sync after save
 function scheduleSync() {
-  clearTimeout(_syncTimer);
-  _syncTimer = setTimeout(() => { if(ghToken) syncSave(); }, 3000);
+  if (window._noSyncSave) return;
+  clearTimeout(window._syncTimer);
+  window._syncTimer = setTimeout(() => { if(fbSyncKey) fbSave(); }, 1000);
 }
-
-
-// ── AUTO UPDATE ──
-// Check for new version on every launch by comparing ETag/date
-(function(){
-  // Force reload if cached version is stale
-  if(!navigator.onLine) return; // offline — use what we have
-  
-  const CHECK_URL = location.href.split('?')[0];
-  const STORED_KEY = 'mk_version';
-  
-  fetch(CHECK_URL, {method:'HEAD', cache:'no-store'})
-    .then(r => {
-      const etag = r.headers.get('etag') || r.headers.get('last-modified') || '';
-      const stored = localStorage.getItem(STORED_KEY);
-      if(stored && stored !== etag && etag) {
-        // New version detected — reload once
-        localStorage.setItem(STORED_KEY, etag);
-        localStorage.setItem('mk_just_updated','1');
-        location.reload(true);
-      } else if(etag) {
-        localStorage.setItem(STORED_KEY, etag);
-      }
-      // Show "just updated" toast
-      if(localStorage.getItem('mk_just_updated')){
-        localStorage.removeItem('mk_just_updated');
-        setTimeout(()=>toastSuccess('Приложение обновлено ✓','Загружена последняя версия'),1500);
-      }
-    })
-    .catch(()=>{}); // no network — ignore
-    
-  // Unregister any old broken SWs
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(regs=>{
-      regs.forEach(r=>r.unregister());
-    });
-  }
-})();
-function applyUpdate(){location.reload(true);}
-
-
 
 // ── QUICK TAG PICKER ──
 let _tpTaskId=null,_tpMode=null;
@@ -2830,7 +2777,7 @@ function speakText(text) {
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
 try{loadCats();}catch(e){}
-try{loadSyncSettings();if(ghToken)setTimeout(syncLoad,2000);}catch(e){}
+try{loadSyncSettings();}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
 try{initSwipes();dbgOk('Swipes ready');}catch(e){dbgErr('Swipes: '+e.message);}
