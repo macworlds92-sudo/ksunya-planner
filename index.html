@@ -797,7 +797,7 @@ function init(){
 
 // ── SETTINGS ──
 function openSett(){
-  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n7 — 🔄 Синхронизация'+(sbSyncKey?' 🟢':'')+'\n8 — 🏷 Мои категории\n\nНомер:');
+  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n7 — 🔄 Синхронизация'+(ghToken?' ✓':'')+'\n8 — 🏷 Мои категории\n\nНомер:');
   if(r==='0'){
     if(confirm('Удалить кеш и перезагрузить?')){
       if('serviceWorker' in navigator){
@@ -2602,7 +2602,7 @@ function initPTR() {
     if (triggered) {
       if(lbl) lbl.textContent = '↻ Обновляю...';
       setTimeout(() => {
-        if (sbSyncKey) {
+        if (ghToken) {
           gistLoad(false, true).then(() => { setTimeout(()=>ind.classList.remove('show'), 500); });
         } else {
           render();
