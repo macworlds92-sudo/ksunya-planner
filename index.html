@@ -2038,8 +2038,8 @@ async function sbSave() {
   }
 }
 
-async function sbLoad(silent) {
-  if (!sbSyncKey || sbSyncKey.length < 3) return; // no key — silent
+async function sbLoad(silent, force) {
+  if (!sbSyncKey || sbSyncKey.length < 3) return;
   if (!silent) setSyncStatus('busy', '🔄 Загрузка...');
   try {
     const r = await fetch(
@@ -2048,23 +2048,27 @@ async function sbLoad(silent) {
     );
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const rows = await r.json();
-    if (!rows.length) { setSyncStatus('ok', '🟢 Нет данных'); return; }
+    if (!rows.length) { setSyncStatus('ok', '🟢 Нет данных на сервере'); return; }
     const remote = rows[0].data;
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    if (remote.savedAt > localTime + 500) {
+    // Force always applies remote, otherwise only if newer
+    if (force || remote.savedAt > localTime + 500) {
       window._noSyncSave = true;
-      tasks = remote.tasks || tasks;
+      tasks = remote.tasks || [];
       tasks.forEach(t => { if(!t.aiH) t.aiH=[]; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
-      tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
+      tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt || Date.now()));
       render();
       window._noSyncSave = false;
-      if (!silent) toastInfo('Синхронизация', '↓ Данные загружены');
+      if (!silent) toastSuccess('Синхронизация', '↓ Данные загружены с сервера');
+    } else {
+      if (!silent) toastInfo('Синхронизация', '✓ Данные актуальны');
     }
     setSyncStatus('ok', '🟢 Онлайн');
   } catch(e) {
     setSyncStatus('err', '✗ ' + e.message);
+    if (!silent) toastError('Ошибка загрузки', e.message);
   }
 }
 
@@ -2140,7 +2144,7 @@ async function openSyncSett() {
     await sbSave();
   } else if (action === '3') {
     if (!sbSyncKey) { toastError('Сначала установи ключ', ''); return; }
-    await sbLoad(false);
+    await sbLoad(false, true); // force override local data
   } else if (action === '4') {
     stopSupabaseSync(); sbSyncKey = '';
     tryLS(() => localStorage.removeItem('mk_fb_key'));
@@ -2606,7 +2610,7 @@ function initPTR() {
       if(lbl) lbl.textContent = '↻ Обновляю...';
       setTimeout(() => {
         if (sbSyncKey) {
-          sbLoad(false).then(() => { ind.classList.remove('show'); });
+          sbLoad(false, true).then(() => { ind.classList.remove('show'); });
         } else {
           render();
           setTimeout(() => ind.classList.remove('show'), 400);
