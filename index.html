@@ -1795,15 +1795,43 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
-// SW registration removed — was causing black screen on iOS
-// Unregister any old broken SW on load
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.getRegistrations().then(regs=>{
-    regs.forEach(r=>r.unregister());
-  });
-}
-function applyUpdate(){window.location.reload();}
-dbgOk('SW disabled — loading from network directly');
+// ── AUTO UPDATE ──
+// Check for new version on every launch by comparing ETag/date
+(function(){
+  // Force reload if cached version is stale
+  if(!navigator.onLine) return; // offline — use what we have
+  
+  const CHECK_URL = location.href.split('?')[0];
+  const STORED_KEY = 'mk_version';
+  
+  fetch(CHECK_URL, {method:'HEAD', cache:'no-store'})
+    .then(r => {
+      const etag = r.headers.get('etag') || r.headers.get('last-modified') || '';
+      const stored = localStorage.getItem(STORED_KEY);
+      if(stored && stored !== etag && etag) {
+        // New version detected — reload once
+        localStorage.setItem(STORED_KEY, etag);
+        localStorage.setItem('mk_just_updated','1');
+        location.reload(true);
+      } else if(etag) {
+        localStorage.setItem(STORED_KEY, etag);
+      }
+      // Show "just updated" toast
+      if(localStorage.getItem('mk_just_updated')){
+        localStorage.removeItem('mk_just_updated');
+        setTimeout(()=>toastSuccess('Приложение обновлено ✓','Загружена последняя версия'),1500);
+      }
+    })
+    .catch(()=>{}); // no network — ignore
+    
+  // Unregister any old broken SWs
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(regs=>{
+      regs.forEach(r=>r.unregister());
+    });
+  }
+})();
+function applyUpdate(){location.reload(true);}
 
 
 
