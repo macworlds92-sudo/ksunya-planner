@@ -2159,8 +2159,13 @@ async function gistSave() {
     const now = Date.now();
     const h = { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' };
 
-    // ── MERGE: fetch remote first to avoid overwriting other device's data ──
-    let remOrders = orders, remWarehouse = warehouse, remPriceList = priceList;
+    // ── MERGE: fetch remote, merge tombstones, apply deletions ──
+    let mergedTasks = tasks.map(t => ({...t, aiH: []}));
+    let mergedOrders = orders;
+    let mergedWarehouse = warehouse;
+    let mergedPriceList = priceList;
+    let mergedDeleted = JSON.parse(JSON.stringify(deletedIds));
+
     try {
       const rr = await fetch('https://api.github.com/gists/' + id + '?t=' + now, { headers: h, cache: 'no-store' });
       if (rr.ok) {
@@ -2168,22 +2173,46 @@ async function gistSave() {
         const rc = rd.files[GIST_FILE]?.content;
         if (rc) {
           const rem = JSON.parse(rc);
-          const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-          // Keep whichever side has MORE data
-          if ((rem.orders||[]).length > orders.length) remOrders = rem.orders;
-          if ((rem.warehouse||[]).length > warehouse.length) remWarehouse = rem.warehouse;
-          if ((rem.priceList||[]).length > priceList.length) remPriceList = rem.priceList;
+          // Merge tombstones first (union)
+          if (rem.deleted) {
+            ['tasks','orders','warehouse','price'].forEach(k => {
+              mergedDeleted[k] = [...new Set([...(mergedDeleted[k]||[]), ...(rem.deleted[k]||[])])];
+            });
+          }
+          // Merge data: combine both sides, deduplicate by id, apply tombstones
+          const mergeArr = (local, remote) => {
+            if (!remote) return local;
+            const map = {};
+            [...remote, ...local].forEach(x => { if(x?.id) map[x.id] = x; });
+            return Object.values(map);
+          };
+          mergedTasks = mergeArr(mergedTasks, rem.tasks);
+          mergedOrders = mergeArr(mergedOrders, rem.orders);
+          mergedWarehouse = mergeArr(mergedWarehouse, rem.warehouse);
+          mergedPriceList = mergeArr(mergedPriceList, rem.priceList);
         }
       }
-    } catch(e) { /* ignore merge errors, save local */ }
+    } catch(e) { /* save local on error */ }
+
+    // Apply tombstones to merged data
+    const applyDel = (arr, key) => (arr||[]).filter(x => !(mergedDeleted[key]||[]).includes(x.id));
+    mergedTasks = applyDel(mergedTasks, 'tasks');
+    mergedOrders = applyDel(mergedOrders, 'orders');
+    mergedWarehouse = applyDel(mergedWarehouse, 'warehouse');
+    mergedPriceList = applyDel(mergedPriceList, 'price');
+
+    // Update deletedIds globally
+    deletedIds = mergedDeleted;
+    saveDeletedIds();
 
     const data = {
-      tasks: tasks.map(t => ({...t, aiH: []})),
+      tasks: mergedTasks,
       links: quickLinks,
       customCats: customCats,
-      orders: remOrders,
-      warehouse: remWarehouse,
-      priceList: remPriceList,
+      orders: mergedOrders,
+      warehouse: mergedWarehouse,
+      priceList: mergedPriceList,
+      deleted: mergedDeleted,
       savedAt: now
     };
     const r = await fetch('https://api.github.com/gists/' + id, {
@@ -2217,13 +2246,24 @@ async function gistLoad(silent, force) {
       if (!force && remote.savedAt === _lastRemoteSavedAt && !remoteHasMore) return;
       _lastRemoteSavedAt = remote.savedAt;
       window._noSyncSave = true;
-      tasks = remote.tasks || tasks;
-      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
+      // Merge tombstones
+      if (remote.deleted) {
+        ['tasks','orders','warehouse','price'].forEach(k => {
+          deletedIds[k] = [...new Set([...(deletedIds[k]||[]), ...(remote.deleted[k]||[])])];
+        });
+        saveDeletedIds();
+      }
+      // Apply tombstones before loading
+      const rTasks = (remote.tasks||tasks).filter(t => !(deletedIds.tasks||[]).includes(t.id));
+      const rOrders = (remote.orders||orders).filter(o => !(deletedIds.orders||[]).includes(o.id));
+      const rWh = (remote.warehouse||warehouse).filter(w => !(deletedIds.warehouse||[]).includes(w.id));
+      const rPl = (remote.priceList||priceList).filter(p => !(deletedIds.price||[]).includes(p.id));
+      tasks = rTasks; tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
-      if (remote.orders) orders = remote.orders;
-      if (remote.warehouse) warehouse = remote.warehouse;
-      if (remote.priceList) priceList = remote.priceList;
+      orders = rOrders;
+      if (remote.warehouse) warehouse = rWh;
+      if (remote.priceList) priceList = rPl;
       tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
       if (curV==='orders') renderOrders();
@@ -2761,6 +2801,7 @@ function initPTR() {
 // ── ORDERS MODULE ──
 let orders = [];
 let ordEditId = null;
+let deletedIds = { tasks: [], orders: [], warehouse: [], price: [] };
 let ordStageFilter = 'all';
 let ordCalMode = false;
 let ordCalYear = new Date().getFullYear();
@@ -2780,6 +2821,26 @@ const ORD_STAGES = {
 function loadOrders() {
   const raw = tryLS(() => localStorage.getItem('mk_orders'), null);
   if (raw) try { orders = JSON.parse(raw); } catch(e) { orders = []; }
+  const dr = tryLS(() => localStorage.getItem('mk_deleted'), null);
+  if (dr) try { deletedIds = JSON.parse(dr); } catch(e) {}
+}
+function saveDeletedIds() {
+  tryLS(() => localStorage.setItem('mk_deleted', JSON.stringify(deletedIds)));
+}
+function addDeleted(type, id) {
+  if (!deletedIds[type]) deletedIds[type] = [];
+  if (!deletedIds[type].includes(id)) deletedIds[type].push(id);
+  // Keep only last 500 per type
+  if (deletedIds[type].length > 500) deletedIds[type] = deletedIds[type].slice(-500);
+  saveDeletedIds();
+}
+function applyTombstones(data) {
+  const d = deletedIds;
+  if (data.tasks) data.tasks = data.tasks.filter(t => !(d.tasks||[]).includes(t.id));
+  if (data.orders) data.orders = data.orders.filter(o => !(d.orders||[]).includes(o.id));
+  if (data.warehouse) data.warehouse = data.warehouse.filter(w => !(d.warehouse||[]).includes(w.id));
+  if (data.priceList) data.priceList = data.priceList.filter(p => !(d.price||[]).includes(p.id));
+  return data;
 }
 function saveOrders() {
   try{updateNavBadges();}catch(e){}
@@ -2925,6 +2986,7 @@ function saveOrder() {
 
 function deleteOrder(id) {
   if (!confirm('Удалить заказ?')) return;
+  addDeleted('orders', id);
   orders = orders.filter(x=>x.id!==id);
   saveOrders(); renderOrders();
 }
@@ -3237,6 +3299,7 @@ function whManualEdit(id) {
 
 function whDelete(id) {
   if (!confirm('Удалить товар со склада?')) return;
+  addDeleted('warehouse', id);
   warehouse = warehouse.filter(x => x.id !== id);
   saveWarehouse();
   renderWhScreen();
@@ -3384,7 +3447,7 @@ function saveWhItemMain() {
   toastSuccess('Товар добавлен', name);
 }
 function whAdjustMain(id, d) { const w=warehouse.find(x=>x.id===id); if(w){w.qty=Math.max(0,(+w.qty||0)+d);saveWarehouse();renderWhMain();} }
-function whDeleteMain(id) { if(!confirm('Удалить?'))return; warehouse=warehouse.filter(x=>x.id!==id); saveWarehouse(); renderWhMain(); }
+function whDeleteMain(id) { if(!confirm('Удалить?'))return; addDeleted('warehouse',id); warehouse=warehouse.filter(x=>x.id!==id); saveWarehouse(); renderWhMain(); }
 
 // ── PRICE LIST ──
 let priceList = [];
@@ -3503,6 +3566,7 @@ function savePriceItem() {
 }
 function deletePriceItem(id) {
   if (!confirm('Удалить из прайса?')) return;
+  addDeleted('price', id);
   priceList = priceList.filter(x => x.id !== id);
   savePriceList();
   renderPrice();
