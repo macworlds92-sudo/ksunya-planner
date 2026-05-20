@@ -403,6 +403,61 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 #ptr-indicator{position:fixed;top:calc(env(safe-area-inset-top,44px) + 58px);left:50%;transform:translateX(-50%) translateY(-80px);z-index:400;background:var(--card);border-radius:50px;padding:10px 20px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;opacity:0;pointer-events:none}
 #ptr-indicator.show{transform:translateX(-50%) translateY(0);opacity:1}
 #ptr-spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:sp .6s linear infinite}
+
+/* ── ORDERS ── */
+.ord-stage-bar{display:flex;gap:6px;overflow-x:auto;padding:0 14px 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.ord-stage-bar::-webkit-scrollbar{display:none}
+.ord-sf{flex-shrink:0;padding:5px 12px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;opacity:.5;transition:opacity .15s}
+.ord-sf.on{opacity:1}
+.ord-card{background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.ord-card-top{padding:12px 14px 8px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.ord-card-top:active{background:var(--bg)}
+.ord-num{font-size:11px;font-weight:700;background:var(--bg);color:var(--text3);padding:2px 7px;border-radius:6px;flex-shrink:0;margin-top:2px}
+.ord-client{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.ord-phone-btn{width:36px;height:36px;border-radius:50%;background:#1D9E75;border:none;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;text-decoration:none}
+.ord-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 8px}
+.ord-price{font-size:16px;font-weight:800;color:var(--teal);padding:0 14px 4px}
+.ord-margin{font-size:12px;color:var(--text3);padding:0 14px 8px}
+.ord-addr{font-size:13px;color:#378ADD;padding:0 14px 8px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.ord-deadline{font-size:12px;color:var(--text3);padding:0 14px 10px}
+.ord-actions{display:flex;border-top:0.5px solid var(--border2)}
+.ord-action-btn{flex:1;padding:10px;border:none;background:none;font-size:13px;font-weight:600;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+.ord-action-btn:active{background:var(--bg)}
+.ord-action-btn+.ord-action-btn{border-left:0.5px solid var(--border2)}
+
+/* Order Form */
+.ord-form-screen{position:fixed;inset:0;background:var(--bg);z-index:70;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1)}
+.ord-form-screen.open{transform:translateY(0)}
+.ord-form-hdr{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,44px) + 12px) 14px 12px;background:var(--card);border-bottom:0.5px solid var(--border2)}
+.ord-form-title{flex:1;font-size:17px;font-weight:700;color:var(--text)}
+.ord-form-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.ord-section{background:var(--card);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.ord-section-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;padding:10px 14px 4px}
+.ord-field{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:0.5px solid var(--border2)}
+.ord-field:first-child{border-top:none}
+.ord-field-lbl{font-size:13px;color:var(--text3);width:90px;flex-shrink:0}
+.ord-field-in{flex:1;border:none;background:transparent;font-size:15px;color:var(--text);outline:none;text-align:right}
+.ord-field-in::placeholder{color:var(--text3)}
+.ord-product-row{display:flex;align-items:center;gap:6px;padding:8px 14px;border-top:0.5px solid var(--border2)}
+.ord-prod-name{flex:2;border:none;background:transparent;font-size:14px;color:var(--text);outline:none}
+.ord-prod-qty{width:50px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;color:var(--text);outline:none;text-align:center}
+.ord-prod-price{width:70px;border:none;background:var(--bg);border-radius:8px;padding:4px 8px;font-size:13px;color:var(--text);outline:none;text-align:right}
+.ord-prod-del{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0 4px}
+.ord-add-row{padding:8px 14px;border-top:0.5px solid var(--border2)}
+.ord-add-btn{background:none;border:none;color:var(--teal);font-size:14px;font-weight:600;cursor:pointer;padding:4px 0}
+.ord-total-row{display:flex;justify-content:space-between;padding:10px 14px;font-size:15px;font-weight:700}
+.ord-stage-select{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px}
+.ord-stage-opt{padding:6px 12px;border-radius:10px;border:2px solid transparent;font-size:12px;font-weight:700;cursor:pointer;opacity:.6;transition:all .15s}
+.ord-stage-opt.on{opacity:1;border-color:currentColor}
+
+/* Stage colors */
+.os-new{background:#E0EDFC;color:#1251A0}
+.os-confirmed{background:#E8F5E1;color:#2A5E10}
+.os-production{background:#FBF2DF;color:#8A5500}
+.os-ready{background:#D6F0E6;color:#0A5E3F}
+.os-delivery{background:#EDE8FC;color:#4A44A0}
+.os-done{background:#E8F5E1;color:#2A5E10}
+.os-cancelled{background:#FCE4E4;color:#992020}
 </style>
 
 <!-- Supabase: direct REST + WebSocket -->
@@ -441,7 +496,8 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
     <button class="nb" id="nb-all" data-tip-title="📋 Все задачи" data-tip="Полный список всех задач. Удержи дольше — появится фильтр по датам." ontouchstart="startLP()" ontouchend="endLP()" ontouchmove="endLP()" onclick="sv('all')"><span class="ni">📋</span>Все</button>
     <div class="nadd"><button class="ac" onclick="openChoice()" data-tip-title="➕ Добавить задачу" data-tip="Создать вручную или с ИИ — он задаст вопросы и создаст задачу со всеми шагами.">+</button></div>
     <button class="nb" id="nb-chat" onclick="openChatScreen()" data-tip-title="💬 Чаты с ИИ" data-tip="Несколько отдельных чатов по разным темам. История каждого сохраняется."><span class="ni">💬</span>Чаты</button>
-    <button class="nb" id="nb-analytics" onclick="sv('analytics')" data-tip-title="📊 Итоги" data-tip="Прогресс по задачам, разбивка по категориям, советы где искать клиентов."><span class="ni">📊</span>Итоги</button>
+    <button class="nb" id="nb-orders" onclick="sv('orders')" data-tip-title="📦 Заказы" data-tip="Ведение заказов, клиенты, себестоимость."><span class="ni">📦</span>Заказы</button>
+            <button class="nb" id="nb-analytics" onclick="sv('analytics')" data-tip-title="📊 Итоги" data-tip="Прогресс по задачам и заказам."><span class="ni">📊</span>Итоги</button>
   </div>
 </div>
 <div style="flex-shrink:0;background:var(--card);height:env(safe-area-inset-bottom,0px);min-height:0;width:100%;"></div>
@@ -851,7 +907,8 @@ function applyDR(){drFrom=document.getElementById('dr-from').value;drTo=document
 // ── NAVIGATION ──
 function sv(v){
   curV=v;
-  ['today','all','analytics'].forEach(x=>{const el=document.getElementById('nb-'+x);if(el)el.classList.toggle('on',x===v);});
+  ['today','all','analytics','orders'].forEach(x=>{const el=document.getElementById('nb-'+x);if(el)el.classList.toggle('on',x===v);});
+  if(v==='orders'){renderOrders();return;}
   render();
 }
 function getVT(){
@@ -2087,6 +2144,7 @@ async function gistLoad(silent, force) {
       tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
+      if (remote.orders) orders = remote.orders;
       tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
       window._noSyncSave = false;
@@ -2616,6 +2674,347 @@ function initPTR() {
   }, {passive: true});
 }
 
+
+// ── ORDERS MODULE ──
+let orders = [];
+let ordEditId = null;
+let ordStageFilter = 'all';
+let ordCalMode = false;
+let ordCalYear = new Date().getFullYear();
+let ordCalMonth = new Date().getMonth();
+let ordCalSelDate = null;
+
+const ORD_STAGES = {
+  'new':        {l:'🆕 Новый',         cls:'os-new'},
+  'confirmed':  {l:'✅ Подтверждён',   cls:'os-confirmed'},
+  'production': {l:'🔪 В производстве',cls:'os-production'},
+  'ready':      {l:'📦 Готов',          cls:'os-ready'},
+  'delivery':   {l:'🚗 Доставка',       cls:'os-delivery'},
+  'done':       {l:'✅ Выполнен',       cls:'os-done'},
+  'cancelled':  {l:'❌ Отменён',        cls:'os-cancelled'},
+};
+
+function loadOrders() {
+  const raw = tryLS(() => localStorage.getItem('mk_orders'), null);
+  if (raw) try { orders = JSON.parse(raw); } catch(e) { orders = []; }
+}
+function saveOrders() {
+  tryLS(() => localStorage.setItem('mk_orders', JSON.stringify(orders)));
+  scheduleSync();
+}
+
+// ── ORDER FORM ──
+let ordProducts = [];
+let ordIngredients = [];
+
+function openOrdForm(id) {
+  ordEditId = id || null;
+  const o = id ? orders.find(x => x.id === id) : null;
+  ordProducts = o ? JSON.parse(JSON.stringify(o.products || [])) : [{name:'',qty:1,price:0}];
+  ordIngredients = o ? JSON.parse(JSON.stringify(o.ingredients || [])) : [];
+  document.getElementById('ord-form-title').textContent = o ? 'Заказ №' + (o.num||'?') : 'Новый заказ';
+  renderOrdForm(o);
+  document.getElementById('ord-form-screen').classList.add('open');
+}
+
+function closeOrdForm() {
+  document.getElementById('ord-form-screen').classList.remove('open');
+}
+
+function renderOrdForm(o) {
+  const stage = o?.stage || 'new';
+  const prodRows = ordProducts.map((p,i) => `
+    <div class="ord-product-row">
+      <input class="ord-prod-name" placeholder="Наименование" value="${p.name||''}" oninput="ordProducts[${i}].name=this.value">
+      <input class="ord-prod-qty" type="number" min="1" placeholder="Кол" value="${p.qty||1}" oninput="ordProducts[${i}].qty=+this.value;updateOrdTotals()">
+      <input class="ord-prod-price" type="number" placeholder="₽" value="${p.price||''}" oninput="ordProducts[${i}].price=+this.value;updateOrdTotals()">
+      <button class="ord-prod-del" onclick="ordDelProduct(${i})">✕</button>
+    </div>`).join('');
+
+  const ingRows = ordIngredients.map((g,i) => `
+    <div class="ord-product-row">
+      <input class="ord-prod-name" placeholder="Ингредиент" value="${g.name||''}" oninput="ordIngredients[${i}].name=this.value">
+      <input class="ord-prod-qty" placeholder="кг/г" value="${g.qty||''}" oninput="ordIngredients[${i}].qty=this.value">
+      <input class="ord-prod-price" type="number" placeholder="₽" value="${g.price||''}" oninput="ordIngredients[${i}].price=+this.value;updateOrdTotals()">
+      <button class="ord-prod-del" onclick="ordDelIngredient(${i})">✕</button>
+    </div>`).join('');
+
+  const total = ordProducts.reduce((s,p) => s + (p.qty||1)*(p.price||0), 0);
+  const cost = ordIngredients.reduce((s,g) => s + (+g.price||0), 0);
+  const margin = total - cost;
+
+  const stageOpts = Object.entries(ORD_STAGES).map(([k,v]) =>
+    `<button class="ord-stage-opt ${v.cls}${stage===k?' on':''}" onclick="document.getElementById('ord-stage-sel').value='${k}';document.querySelectorAll('.ord-stage-opt').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${v.l}</button>`
+  ).join('');
+
+  document.getElementById('ord-form-body').innerHTML = `
+    <div class="ord-section">
+      <div class="ord-section-title">Клиент</div>
+      <div class="ord-field"><span class="ord-field-lbl">Имя</span><input class="ord-field-in" id="of-name" placeholder="Имя клиента" value="${o?.client?.name||''}"></div>
+      <div class="ord-field"><span class="ord-field-lbl">Телефон</span><input class="ord-field-in" id="of-phone" type="tel" placeholder="+7..." value="${o?.client?.phone||''}"></div>
+      <div class="ord-field"><span class="ord-field-lbl">Адрес</span><input class="ord-field-in" id="of-addr" placeholder="Адрес доставки" value="${o?.address||''}"></div>
+      <div class="ord-field"><span class="ord-field-lbl">Дедлайн</span><input class="ord-field-in" id="of-deadline" type="date" value="${o?.deadline||''}"></div>
+      <div class="ord-field"><span class="ord-field-lbl">Комментарий</span><input class="ord-field-in" id="of-comment" placeholder="..." value="${o?.comment||''}"></div>
+    </div>
+
+    <div class="ord-section">
+      <div class="ord-section-title">Статус заказа</div>
+      <div class="ord-stage-select">${stageOpts}</div>
+      <input type="hidden" id="ord-stage-sel" value="${stage}">
+    </div>
+
+    <div class="ord-section">
+      <div class="ord-section-title">Позиции заказа</div>
+      <div id="ord-prod-list">${prodRows}</div>
+      <div class="ord-add-row"><button class="ord-add-btn" onclick="ordAddProduct()">+ Добавить позицию</button></div>
+      <div class="ord-total-row"><span>Итого:</span><span id="ord-total-lbl" style="color:var(--teal)">${total.toLocaleString('ru')} ₽</span></div>
+    </div>
+
+    <div class="ord-section">
+      <div class="ord-section-title">Себестоимость (ингредиенты)</div>
+      <div id="ord-ing-list">${ingRows}</div>
+      <div class="ord-add-row"><button class="ord-add-btn" onclick="ordAddIngredient()">+ Добавить ингредиент</button></div>
+      <div class="ord-total-row">
+        <span>Себестоимость:</span><span id="ord-cost-lbl" style="color:var(--red)">${cost.toLocaleString('ru')} ₽</span>
+      </div>
+      <div class="ord-total-row" style="border-top:0.5px solid var(--border2)">
+        <span>Прибыль:</span><span id="ord-margin-lbl" style="color:${margin>=0?'var(--teal)':'var(--red)'}">${margin.toLocaleString('ru')} ₽</span>
+      </div>
+    </div>
+  `;
+}
+
+function updateOrdTotals() {
+  const total = ordProducts.reduce((s,p) => s+(p.qty||1)*(p.price||0),0);
+  const cost = ordIngredients.reduce((s,g) => s+(+g.price||0),0);
+  const margin = total-cost;
+  const tl = document.getElementById('ord-total-lbl');
+  const cl = document.getElementById('ord-cost-lbl');
+  const ml = document.getElementById('ord-margin-lbl');
+  if(tl) tl.textContent = total.toLocaleString('ru')+' ₽';
+  if(cl) cl.textContent = cost.toLocaleString('ru')+' ₽';
+  if(ml){ ml.textContent = margin.toLocaleString('ru')+' ₽'; ml.style.color = margin>=0?'var(--teal)':'var(--red)'; }
+}
+
+function ordAddProduct() {
+  ordProducts.push({name:'',qty:1,price:0});
+  const o = ordEditId ? orders.find(x=>x.id===ordEditId) : null;
+  renderOrdForm(o);
+}
+function ordDelProduct(i) { ordProducts.splice(i,1); const o=ordEditId?orders.find(x=>x.id===ordEditId):null; renderOrdForm(o); }
+function ordAddIngredient() { ordIngredients.push({name:'',qty:'',price:0}); const o=ordEditId?orders.find(x=>x.id===ordEditId):null; renderOrdForm(o); }
+function ordDelIngredient(i) { ordIngredients.splice(i,1); const o=ordEditId?orders.find(x=>x.id===ordEditId):null; renderOrdForm(o); }
+
+function saveOrder() {
+  const name = document.getElementById('of-name')?.value.trim();
+  if (!name) { alert('Введи имя клиента'); return; }
+  const stage = document.getElementById('ord-stage-sel')?.value || 'new';
+  const data = {
+    client: { name, phone: document.getElementById('of-phone')?.value.trim()||'' },
+    address: document.getElementById('of-addr')?.value.trim()||'',
+    deadline: document.getElementById('of-deadline')?.value||'',
+    comment: document.getElementById('of-comment')?.value.trim()||'',
+    stage,
+    products: ordProducts.filter(p=>p.name),
+    ingredients: ordIngredients.filter(g=>g.name),
+  };
+  if (ordEditId) {
+    const o = orders.find(x=>x.id===ordEditId);
+    if (o) Object.assign(o, data);
+  } else {
+    const nums = orders.map(o=>o.num||0);
+    const nN = nums.length ? Math.max(...nums)+1 : 1;
+    orders.push({ id: Date.now(), num: nN, createdAt: Date.now(), ...data });
+  }
+  saveOrders();
+  closeOrdForm();
+  if (curV==='orders') renderOrders();
+  toastSuccess(ordEditId?'Заказ обновлён':'Заказ создан', data.client.name);
+}
+
+function deleteOrder(id) {
+  if (!confirm('Удалить заказ?')) return;
+  orders = orders.filter(x=>x.id!==id);
+  saveOrders(); renderOrders();
+}
+
+// ── ORDERS RENDER ──
+function renderOrders() {
+  const mc = document.getElementById('main');
+  if (!mc) return;
+
+  const filtered = ordStageFilter==='all' ? orders : orders.filter(o=>o.stage===ordStageFilter);
+
+  let h = `<div class="cal-toggle">
+    <button class="cal-toggle-btn${!ordCalMode?' on':''}" onclick="setOrdCalMode(false)">📋 Список</button>
+    <button class="cal-toggle-btn${ordCalMode?' on':''}" onclick="setOrdCalMode(true)">📅 Календарь</button>
+    <button class="cal-toggle-btn" onclick="openOrdForm()" style="background:var(--teal);color:#fff;flex:none;padding:8px 14px">+ Заказ</button>
+  </div>`;
+
+  // Stage filter bar
+  h += `<div class="ord-stage-bar">
+    <button class="ord-sf${ordStageFilter==='all'?' on':''}" style="background:var(--card);color:var(--text)" onclick="setOrdFilter('all')">Все (${orders.length})</button>`;
+  Object.entries(ORD_STAGES).forEach(([k,v]) => {
+    const cnt = orders.filter(o=>o.stage===k).length;
+    if (cnt > 0 || ordStageFilter===k)
+      h += `<button class="ord-sf ${v.cls}${ordStageFilter===k?' on':''}" onclick="setOrdFilter('${k}')">${v.l} ${cnt}</button>`;
+  });
+  h += '</div>';
+
+  if (ordCalMode) {
+    h += renderOrdCalendar(filtered);
+  } else {
+    // Group by stage
+    if (!filtered.length) {
+      h += '<div class="emp">Заказов нет<br><span style="font-size:13px">Нажми + чтобы создать</span></div>';
+    } else {
+      // Sort: by deadline then createdAt
+      const sorted = [...filtered].sort((a,b) => {
+        if(a.deadline && b.deadline) return a.deadline < b.deadline ? -1 : 1;
+        if(a.deadline) return -1;
+        if(b.deadline) return 1;
+        return b.createdAt - a.createdAt;
+      });
+      sorted.forEach(o => { h += ordCardHTML(o); });
+    }
+    // Analytics summary
+    const totalRevenue = orders.filter(o=>o.stage!=='cancelled').reduce((s,o)=>s+ordTotal(o),0);
+    const totalCost = orders.filter(o=>o.stage!=='cancelled').reduce((s,o)=>s+ordCost(o),0);
+    const done = orders.filter(o=>o.stage==='done').length;
+    h += `<div class="ord-section" style="margin-top:14px">
+      <div class="ord-section-title">Итого по заказам</div>
+      <div class="ord-total-row"><span>Выручка</span><span style="color:var(--teal)">${totalRevenue.toLocaleString('ru')} ₽</span></div>
+      <div class="ord-total-row"><span>Себестоимость</span><span style="color:var(--red)">${totalCost.toLocaleString('ru')} ₽</span></div>
+      <div class="ord-total-row" style="border-top:0.5px solid var(--border2)"><span>Прибыль</span><span style="color:${totalRevenue-totalCost>=0?'var(--teal)':'var(--red)'};font-size:18px;font-weight:800">${(totalRevenue-totalCost).toLocaleString('ru')} ₽</span></div>
+      <div class="ord-total-row"><span>Выполнено</span><span>${done} из ${orders.length}</span></div>
+    </div>`;
+  }
+  mc.innerHTML = h;
+}
+
+function ordTotal(o) { return (o.products||[]).reduce((s,p)=>s+(p.qty||1)*(p.price||0),0); }
+function ordCost(o) { return (o.ingredients||[]).reduce((s,g)=>s+(+g.price||0),0); }
+
+function ordCardHTML(o) {
+  const st = ORD_STAGES[o.stage||'new']||ORD_STAGES['new'];
+  const total = ordTotal(o);
+  const cost = ordCost(o);
+  const margin = total - cost;
+  const dStr = o.deadline ? new Date(o.deadline+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}) : '';
+  const ov = o.deadline && o.deadline < TODAY && o.stage !== 'done' && o.stage !== 'cancelled';
+  const prodList = (o.products||[]).slice(0,3).map(p=>`${p.name} ×${p.qty}`).join(', ');
+
+  return `<div class="ord-card" id="oc-${o.id}">
+    <div class="ord-card-top" onclick="openOrdForm(${o.id})">
+      <span class="ord-num">№${o.num}</span>
+      <div style="flex:1">
+        <div class="ord-client">${o.client?.name||'Без имени'}</div>
+        ${prodList?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${prodList}${(o.products||[]).length>3?'...':''}</div>`:''}
+      </div>
+      ${o.client?.phone?`<a class="ord-phone-btn" href="tel:${o.client.phone}" onclick="event.stopPropagation()">📞</a>`:''}
+    </div>
+    <div class="ord-chips">
+      <span class="${st.cls}" style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700">${st.l}</span>
+      ${dStr?`<span class="ch ch-d${ov?' ov':''}" style="font-size:11px">📅 ${dStr}${ov?' · просрочено':''}</span>`:''}
+    </div>
+    ${total?`<div class="ord-price">${total.toLocaleString('ru')} ₽</div>
+    <div class="ord-margin">Себест.: ${cost.toLocaleString('ru')} ₽ &nbsp;|&nbsp; Прибыль: <span style="color:${margin>=0?'var(--teal)':'var(--red)'};font-weight:700">${margin.toLocaleString('ru')} ₽</span></div>`:''}
+    ${o.address?`<div class="ord-addr" onclick="openMap('${o.address.replace(/'/g,"\\'")}')">📍 ${o.address}</div>`:''}
+    <div class="ord-actions">
+      <button class="ord-action-btn" onclick="openOrdForm(${o.id})">✏️ Редактировать</button>
+      <button class="ord-action-btn" onclick="quickOrdStage(${o.id})">🔄 Стадия</button>
+      <button class="ord-action-btn" style="color:var(--red)" onclick="deleteOrder(${o.id})">🗑</button>
+    </div>
+  </div>`;
+}
+
+function quickOrdStage(id) {
+  const o = orders.find(x=>x.id===id);
+  if (!o) return;
+  const cur = o.stage||'new';
+  const keys = Object.keys(ORD_STAGES);
+  const idx = keys.indexOf(cur);
+  const next = keys[(idx+1) % keys.length];
+  o.stage = next;
+  saveOrders(); renderOrders();
+  toastInfo('Статус: ' + ORD_STAGES[next].l, '№'+o.num);
+}
+
+function setOrdFilter(stage) { ordStageFilter = stage; renderOrders(); }
+function setOrdCalMode(on) { ordCalMode = on; renderOrders(); }
+
+function openMap(address) {
+  const q = encodeURIComponent(address);
+  // Try Yandex Maps first (better for Russia), fallback to Apple Maps
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|Mac/.test(ua)) {
+    window.open('maps://maps.apple.com/?q=' + q, '_blank');
+  } else {
+    window.open('https://yandex.ru/maps/?text=' + q, '_blank');
+  }
+}
+
+function renderOrdCalendar(filtered) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmt(today);
+  const firstDay = new Date(ordCalYear, ordCalMonth, 1);
+  let startDow = firstDay.getDay(); if(startDow===0) startDow=7;
+  const startDate = new Date(firstDay); startDate.setDate(startDate.getDate()-(startDow-1));
+
+  const byDate = {};
+  filtered.forEach(o => { if(o.deadline){ if(!byDate[o.deadline]) byDate[o.deadline]=[]; byDate[o.deadline].push(o); } });
+
+  let h = `<div class="cal-header">
+    <button class="cal-nav" onclick="ordCalNav(-1)">‹</button>
+    <div class="cal-month">${MONTHS_RU[ordCalMonth]} ${ordCalYear}</div>
+    <button class="cal-nav" onclick="ordCalNav(1)">›</button>
+  </div>
+  <div class="cal-grid">
+    <div class="cal-weekdays">${WD_RU.map(d=>`<div class="cal-wd">${d}</div>`).join('')}</div>
+    <div class="cal-days">`;
+
+  const cur = new Date(startDate);
+  for(let i=0;i<42;i++){
+    const dStr=fmt(cur);
+    const isToday=dStr===todayStr, isOther=cur.getMonth()!==ordCalMonth, isSel=dStr===ordCalSelDate;
+    const dayOrds = byDate[dStr]||[];
+    const dots = dayOrds.slice(0,4).map(o=>{
+      const st=ORD_STAGES[o.stage||'new'];
+      const cls=st.cls; 
+      const clr=cls==='os-new'?'#1251A0':cls==='os-confirmed'?'#2A5E10':cls==='os-production'?'#8A5500':cls==='os-ready'?'#0A5E3F':cls==='os-delivery'?'#4A44A0':cls==='os-done'?'#2A5E10':'#992020';
+      return `<div class="cal-dot" style="background:${clr}"></div>`;
+    }).join('');
+    h+=`<div class="cal-day${isToday?' today':''}${isOther?' other-month':''}${isSel?' selected':''}" onclick="ordSelDay('${dStr}')">
+      <div class="cal-dn">${cur.getDate()}</div><div class="cal-dots">${dots}</div></div>`;
+    cur.setDate(cur.getDate()+1);
+    if(i===41) break;
+  }
+  h+='</div></div>';
+
+  if(ordCalSelDate){
+    const selOrds=byDate[ordCalSelDate]||[];
+    const selD=new Date(ordCalSelDate+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'long',weekday:'long'});
+    h+=`<div class="cal-day-tasks"><div class="cal-day-title">📅 ${selD} · ${selOrds.length} заказов</div>`;
+    selOrds.forEach(o=>{
+      const st=ORD_STAGES[o.stage||'new'];
+      h+=`<div class="cal-task-row" onclick="openOrdForm(${o.id})">
+        <div class="cal-task-info">
+          <div class="cal-task-name">№${o.num} ${o.client?.name||''}</div>
+          <div class="cal-task-chips"><span class="${st.cls}" style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">${st.l}</span>
+          ${ordTotal(o)?`<span style="font-size:11px;font-weight:700;color:var(--teal)">${ordTotal(o).toLocaleString('ru')} ₽</span>`:''}
+          </div>
+        </div><span style="color:var(--text3);font-size:20px">›</span>
+      </div>`;
+    });
+    if(!selOrds.length) h+=`<div style="padding:14px;font-size:14px;color:var(--text3)">Нет заказов на этот день</div>`;
+    h+='</div>';
+  }
+  return h;
+}
+
+function ordCalNav(d){ ordCalMonth+=d; if(ordCalMonth<0){ordCalMonth=11;ordCalYear--;} if(ordCalMonth>11){ordCalMonth=0;ordCalYear++;} renderOrders(); }
+function ordSelDay(d){ ordCalSelDate=d; renderOrders(); }
+
 // ── VK API ──
 let vkToken = '';
 const VK_GID = '238718596';
@@ -2902,6 +3301,7 @@ function speakText(text) {
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
 try{loadCats();}catch(e){}
+try{loadOrders();}catch(e){}
 try{loadSyncSettings();}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
@@ -3018,6 +3418,17 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
   <div class="dp"></div>
   <div class="ol-hdr"><span style="font-size:20px">↗️</span><div class="ol-title">Переместить в задачу</div><button class="ol-close" onclick="closeMoveSubOl()">✕</button></div>
   <div style="flex:1;overflow-y:auto" id="move-sub-list"></div>
+</div>
+
+
+<!-- Orders Form Screen -->
+<div class="ord-form-screen" id="ord-form-screen">
+  <div class="ord-form-hdr">
+    <button class="ol-close" onclick="closeOrdForm()">✕</button>
+    <div class="ord-form-title" id="ord-form-title">Новый заказ</div>
+    <button class="tbt" onclick="saveOrder()" style="background:var(--teal);color:#fff;border-radius:10px;padding:6px 14px;font-size:14px;font-weight:700">Сохранить</button>
+  </div>
+  <div class="ord-form-body" id="ord-form-body"></div>
 </div>
 
 </body>
