@@ -2924,7 +2924,7 @@ function renderOrders() {
   <div class="cal-toggle">
     <button class="cal-toggle-btn${!ordCalMode?' on':''}" onclick="setOrdCalMode(false)">📋 Список</button>
     <button class="cal-toggle-btn${ordCalMode?' on':''}" onclick="setOrdCalMode(true)">📅 Календарь</button>
-    <button class="cal-toggle-btn" onclick="openOrdForm()" style="background:var(--teal);color:#fff;flex:none;padding:8px 14px">+ Заказ</button>
+
   </div>`;
 
   // Stage filter bar
@@ -3370,55 +3370,81 @@ function renderPrice() {
   const mc = document.getElementById('main');
   if (!mc) return;
   
-  const cats = [...new Set(priceList.map(p => p.cat||'Общее'))];
+  const cats = [...new Set(priceList.map(p => p.cat||'Общее'))].sort();
   const filtered = priceFilter==='all' ? priceList : priceList.filter(p => (p.cat||'Общее')===priceFilter);
 
-  let h = `<div class="ord-stage-bar">
-    <button class="ord-sf${priceFilter==='all'?' on':''}" style="background:var(--card);color:var(--text)" onclick="setPriceFilter('all')">Все</button>
-    ${cats.map(c=>`<button class="ord-sf${priceFilter===c?' on':''}" style="background:var(--teal-l);color:var(--teal-d)" onclick="setPriceFilter('${c}')">${c}</button>`).join('')}
+  document.getElementById('hs').textContent = `${priceList.length} позиций`;
+
+  // Tag-style category filters
+  let h = `<div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 0 10px">
+    <button onclick="setPriceFilter('all')" style="padding:5px 14px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:${priceFilter==='all'?'var(--teal)':'var(--card)'};color:${priceFilter==='all'?'#fff':'var(--text3)'}">Все (${priceList.length})</button>
+    ${cats.map(c => {
+      const cnt = priceList.filter(p=>(p.cat||'Общее')===c).length;
+      const on = priceFilter===c;
+      return `<button onclick="setPriceFilter('${c}')" style="padding:5px 14px;border-radius:20px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:${on?'var(--teal)':'var(--card)'};color:${on?'#fff':'var(--text)'}">
+        ${c} <span style="opacity:.6">${cnt}</span>
+      </button>`;
+    }).join('')}
   </div>`;
 
   // Add form
   h += `<div class="ord-section" style="margin-bottom:12px">
     <div class="ord-section-title">Добавить позицию</div>
-    <div class="ord-field"><span class="ord-field-lbl">Наименование</span><input class="ord-field-in" id="pl-new-name" placeholder="Название"></div>
-    <div class="ord-field"><span class="ord-field-lbl">Категория</span><input class="ord-field-in" id="pl-new-cat" placeholder="Колбаса, Лакомства..."></div>
+    <div class="ord-field"><span class="ord-field-lbl">Наименование</span><input class="ord-field-in" id="pl-new-name" placeholder="Краковская 500г"></div>
+    <div class="ord-field">
+      <span class="ord-field-lbl">Категория</span>
+      <div style="display:flex;gap:6px;align-items:center;flex:1;justify-content:flex-end">
+        <input class="ord-field-in" id="pl-new-cat" placeholder="Колбаса" style="max-width:140px">
+        ${cats.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${cats.slice(0,4).map(c=>`<button onclick="document.getElementById('pl-new-cat').value='${c}'" style="padding:2px 8px;border-radius:10px;border:1px solid var(--border2);background:var(--bg);font-size:11px;color:var(--text3);cursor:pointer">${c}</button>`).join('')}</div>` : ''}
+      </div>
+    </div>
     <div class="ord-field"><span class="ord-field-lbl">Цена ₽</span><input class="ord-field-in" id="pl-new-price" type="number" placeholder="0" min="0"></div>
     <div class="ord-field">
       <span class="ord-field-lbl">Вес/Ед.</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input class="ord-field-in" id="pl-new-weight" type="number" placeholder="500" min="0" style="width:80px;text-align:right">
-        <select id="pl-new-wunit" class="ord-prod-qty" style="width:65px;flex-shrink:0">
+      <div style="display:flex;gap:6px;align-items:center;flex:1;justify-content:flex-end">
+        <input id="pl-new-weight" type="number" placeholder="500" style="width:70px;border:1px solid var(--border2);border-radius:8px;padding:6px 8px;font-size:14px;background:var(--bg);color:var(--text);outline:none;text-align:right">
+        <select id="pl-new-wunit" style="width:60px;border:1px solid var(--border2);border-radius:8px;padding:6px 4px;font-size:14px;background:var(--bg);color:var(--text);outline:none">
           ${UNITS.map(u=>`<option>${u}</option>`).join('')}
         </select>
       </div>
     </div>
-    <div style="padding:10px 14px"><button onclick="savePriceItem()" style="width:100%;padding:12px;border-radius:12px;background:var(--teal);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer">+ Добавить</button></div>
+    <div style="padding:10px 14px"><button onclick="savePriceItem()" style="width:100%;padding:12px;border-radius:12px;background:var(--teal);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer">+ Добавить в прайс</button></div>
   </div>`;
 
-  // Table
   if (!filtered.length) {
     h += '<div class="emp">Прайс-лист пуст</div>';
   } else {
-    h += `<div class="ord-section">
-      <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;border-bottom:1.5px solid var(--border2)">
-        <div style="padding:8px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Наименование</div>
-        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Вес</div>
-        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Цена</div>
-        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3)"></div>
-      </div>`;
+    // ── TABLE VIEW ──
+    // Group by category
+    const grouped = {};
     filtered.forEach(p => {
-      h += `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;border-top:0.5px solid var(--border2);align-items:center">
-        <div style="padding:10px 14px">
-          <div style="font-size:14px;font-weight:600;color:var(--text)">${p.name}</div>
-          <div style="font-size:11px;color:var(--text3)">${p.cat||'Общее'}</div>
-        </div>
-        <div style="padding:10px;font-size:13px;color:var(--text2)">${p.weight?p.weight+' '+(p.wunit||'г'):'-'}</div>
-        <div style="padding:10px;font-size:14px;font-weight:700;color:var(--teal)">${p.price?p.price+' ₽':'-'}</div>
-        <button onclick="deletePriceItem(${p.id})" style="background:none;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:10px">🗑</button>
-      </div>`;
+      const cat = p.cat||'Общее';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(p);
     });
-    h += '</div>';
+    
+    Object.entries(grouped).forEach(([cat, items]) => {
+      h += `<div class="ord-section" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 6px">
+          <span style="font-size:12px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:.05em">${cat}</span>
+          <span style="font-size:11px;color:var(--text3)">${items.length} позиций</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 60px 70px 36px;background:var(--bg);border-top:0.5px solid var(--border2);border-bottom:0.5px solid var(--border2)">
+          <div style="padding:6px 14px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase">Наименование</div>
+          <div style="padding:6px 6px;font-size:10px;font-weight:700;color:var(--text3);text-align:center;text-transform:uppercase">Вес</div>
+          <div style="padding:6px 10px;font-size:10px;font-weight:700;color:var(--text3);text-align:right;text-transform:uppercase">Цена</div>
+          <div></div>
+        </div>`;
+      items.forEach((p, i) => {
+        h += `<div style="display:grid;grid-template-columns:1fr 60px 70px 36px;align-items:center;border-top:${i>0?'0.5px solid var(--border2)':'none'}">
+          <div style="padding:10px 14px;font-size:14px;font-weight:500;color:var(--text)">${p.name}</div>
+          <div style="padding:10px 6px;font-size:12px;color:var(--text3);text-align:center">${p.weight?p.weight+' '+(p.wunit||'г'):'-'}</div>
+          <div style="padding:10px;font-size:14px;font-weight:700;color:var(--teal);text-align:right">${p.price?p.price+' ₽':'-'}</div>
+          <button onclick="deletePriceItem(${p.id})" style="background:none;border:none;color:var(--text3);font-size:14px;cursor:pointer;padding:10px 8px">✕</button>
+        </div>`;
+      });
+      h += '</div>';
+    });
   }
   mc.innerHTML = h;
 }
