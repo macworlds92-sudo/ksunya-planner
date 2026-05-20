@@ -2417,11 +2417,12 @@ function openStagePicker(id, el) {
   picker.style.left = Math.min(r.left, W-175) + 'px';
   picker.style.top = (r.bottom + 6) + 'px';
   picker.classList.add('show');
-  bg.style.display = 'block';
+  if (bg) { bg.style.display = 'block'; bg.style.pointerEvents = 'all'; bg.style.visibility = 'visible'; }
 }
 function closeStagePicker() {
   document.getElementById('stage-picker').classList.remove('show');
-  document.getElementById('stage-picker-bg').style.display = 'none';
+  const bg = document.getElementById('stage-picker-bg');
+  if (bg) { bg.style.display = 'none'; bg.style.pointerEvents = 'none'; bg.style.visibility = 'hidden'; }
   _stageTaskId = null;
 }
 function applyStage(stage) {
@@ -3533,7 +3534,7 @@ function initViewSwipes() {
     const absDx = Math.abs(dx), absDy = Math.abs(dy);
 
     // Must be horizontal, fast enough, long enough
-    if (absDx < 50 || absDy > absDx * 0.7 || dt > 500) return;
+    if (absDx < 80 || absDy > absDx * 0.6 || dt > 600) return;
 
     // ── SWIPE RIGHT = go back / switch to list ──
     if (dx > 0) {
@@ -3984,7 +3985,7 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 
 
 <!-- Stage Picker -->
-<div id="stage-picker-bg" onclick="closeStagePicker()" style="position:fixed;inset:0;z-index:199;display:none"></div>
+<div id="stage-picker-bg" onclick="closeStagePicker()" style="position:fixed;inset:0;z-index:199;display:none;pointer-events:none;visibility:hidden"></div>
 <div id="stage-picker">
   <button class="stage-pick-opt stage-new" onclick="applyStage('new')">🆕 Новая</button>
   <button class="stage-pick-opt stage-work" onclick="applyStage('work')">⚡ В работе</button>
