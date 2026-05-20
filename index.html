@@ -528,13 +528,12 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
   </div>
   <div id="main"></div>
   <div id="nav">
-    <button class="nb on" id="nb-today" onclick="sv('today')" data-tip-title="📅 Сегодня" data-tip="Только задачи на сегодня. Открывай каждое утро — здесь самое важное."><span class="ni">📅</span>Сегодня</button>
-    <button class="nb" id="nb-all" data-tip-title="📋 Все задачи" data-tip="Полный список всех задач. Удержи дольше — появится фильтр по датам." ontouchstart="startLP()" ontouchend="endLP()" ontouchmove="endLP()" onclick="sv('all')"><span class="ni">📋</span>Все</button>
-    <div class="nadd"><button class="ac" onclick="openChoice()" data-tip-title="➕ Добавить задачу" data-tip="Создать вручную или с ИИ — он задаст вопросы и создаст задачу со всеми шагами.">+</button></div>
-    <button class="nb" id="nb-chat" onclick="openChatScreen()" data-tip-title="💬 Чаты с ИИ" data-tip="Несколько отдельных чатов по разным темам. История каждого сохраняется."><span class="ni">💬</span>Чаты</button>
-    <button class="nb" id="nb-orders" onclick="sv('orders')" data-tip-title="📦 Заказы" data-tip="Ведение заказов, клиенты, себестоимость."><span class="ni">📦</span>Заказы</button>
-            <button class="nb" id="nb-analytics" onclick="sv('analytics')" data-tip-title="📊 Итоги" data-tip="Прогресс по задачам и заказам."><span class="ni">📊</span>Итоги</button>
-  </div>
+    <button class="nb on" id="nb-all" ontouchstart="startLP()" ontouchend="endLP()" ontouchmove="endLP()" onclick="handleAllClick()"><span class="ni">📋</span>Задачи</button>
+    <button class="nb" id="nb-orders" onclick="handleNavTap('orders',openOrdForm)"><span class="ni">📦</span>Заказы</button>
+    <div class="nadd"><button class="ac" onclick="openChoice()">+</button></div>
+    <button class="nb" id="nb-warehouse" onclick="handleNavTap('warehouse',()=>{sv('warehouse');setTimeout(()=>{const el=document.getElementById('wh-new-name');if(el)el.focus();},300)})"><span class="ni">🏪</span>Склад</button>
+    <button class="nb" id="nb-price" onclick="sv('price')"><span class="ni">💰</span>Прайс</button>
+    <button class="nb" id="nb-analytics" onclick="sv('analytics')"><span class="ni">📊</span>Итоги</button>
 </div>
 <div style="flex-shrink:0;background:var(--card);height:env(safe-area-inset-bottom,0px);min-height:0;width:100%;"></div>
 
@@ -945,6 +944,9 @@ function sv(v){
   curV=v;
   ['today','all','analytics','orders'].forEach(x=>{const el=document.getElementById('nb-'+x);if(el)el.classList.toggle('on',x===v);});
   if(v==='orders'){renderOrders();return;}
+  if(v==='warehouse'){renderWhMain();return;}
+  if(v==='price'){renderPrice();return;}
+  if(v==='chat'){const mc=document.getElementById('main');if(mc)mc.innerHTML='';showChatList&&showChatList();return;}
   render();
 }
 function getVT(){
@@ -1527,6 +1529,14 @@ async function sendAI(){
 
 // ── ANALYTICS ──
 function renderA(){
+  // Orders analytics
+  const ordRevenue = orders.filter(o=>o.stage!=='cancelled').reduce((s,o)=>s+ordTotal(o),0);
+  const ordCostTotal = orders.filter(o=>o.stage!=='cancelled').reduce((s,o)=>s+ordCost(o),0);
+  const ordDone = orders.filter(o=>o.stage==='done');
+  const ordDoneRevenue = ordDone.reduce((s,o)=>s+ordTotal(o),0);
+  // Warehouse analytics
+  const whTotal = warehouse.reduce((s,w)=>s+(+w.qty||0)*(+w.price||0),0);
+  const whLow = warehouse.filter(w=>w.minQty&&(+w.qty)<=(+w.minQty));
   const allC=allCats();const cats=allC.map(c=>c.id);const COLORS=['#1D9E75','#BA7517','#378ADD','#7F77DD','#E24B4A','#2A5E10','#E65100','#6A1B9A'];const cc={};allC.forEach((c,i)=>{cc[c.id]=COLORS[i%COLORS.length];});
   const cd=cats.map(c=>({n:catName(c),tot:tasks.filter(t=>t.cat===c).length,done:tasks.filter(t=>t.cat===c&&t.done).length,c:cc[c]}));
   const mt=Math.max(...cd.map(d=>d.tot),1);
@@ -2146,6 +2156,7 @@ async function gistSave() {
       customCats: customCats,
       orders: orders,
       warehouse: warehouse,
+      priceList: priceList,
       savedAt: now
     };
     const h = { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' };
@@ -2174,17 +2185,24 @@ async function gistLoad(silent, force) {
     if (!content) { if (!silent) setSyncStatus('ok', '✓ Нет данных'); return; }
     const remote = JSON.parse(content);
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    if (force || remote.savedAt > localTime + 500) {
-      if (!force && remote.savedAt === _lastRemoteSavedAt) return;
+    const remoteNewer = remote.savedAt > localTime + 500;
+    const remoteHasMore = (remote.orders||[]).length > orders.length || (remote.tasks||[]).length > tasks.length;
+    if (force || remoteNewer || remoteHasMore) {
+      if (!force && remote.savedAt === _lastRemoteSavedAt && !remoteHasMore) return;
       _lastRemoteSavedAt = remote.savedAt;
       window._noSyncSave = true;
-      tasks = remote.tasks || [];
+      tasks = remote.tasks || tasks;
       tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
       if (remote.orders) orders = remote.orders;
+      if (remote.warehouse) warehouse = remote.warehouse;
+      if (remote.priceList) priceList = remote.priceList;
       tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
+      if (curV==='orders') renderOrders();
+      if (curV==='warehouse') renderWhMain();
+      if (curV==='price') renderPrice();
       window._noSyncSave = false;
       setSyncStatus('ok', '✓ Обновлено');
       if (!silent) toastSuccess('Синхронизация', '↓ Данные загружены');
@@ -2572,7 +2590,7 @@ function renderList() {
   updateInboxBadge&&updateInboxBadge();
 
   let h=`<div class="cal-toggle">
-    <button class="cal-toggle-btn on">📋 Список</button>
+    <button class="cal-toggle-btn on">📋 Задачи</button>
     <button class="cal-toggle-btn" onclick="setCalMode(true)">📅 Календарь</button>
   </div>`;
 
@@ -2792,6 +2810,7 @@ function renderOrdForm(o) {
       <div class="ord-field"><span class="ord-field-lbl">Имя</span><input class="ord-field-in" id="of-name" placeholder="Имя клиента" value="${o?.client?.name||''}"></div>
       <div class="ord-field"><span class="ord-field-lbl">Телефон</span><input class="ord-field-in" id="of-phone" type="tel" placeholder="+7..." value="${o?.client?.phone||''}"></div>
       <div class="ord-field"><span class="ord-field-lbl">Адрес</span><input class="ord-field-in" id="of-addr" placeholder="Адрес доставки" value="${o?.address||''}"></div>
+      <div class="ord-field"><span class="ord-field-lbl">Дата обращения</span><input class="ord-field-in" id="of-contact" type="date" value="${o?.contactDate||TODAY}"></div>
       <div class="ord-field"><span class="ord-field-lbl">Дедлайн</span><input class="ord-field-in" id="of-deadline" type="date" value="${o?.deadline||''}"></div>
       <div class="ord-field"><span class="ord-field-lbl">Комментарий</span><input class="ord-field-in" id="of-comment" placeholder="..." value="${o?.comment||''}"></div>
     </div>
@@ -2848,12 +2867,15 @@ function saveOrder() {
   const name = document.getElementById('of-name')?.value.trim();
   if (!name) { alert('Введи имя клиента'); return; }
   const stage = document.getElementById('ord-stage-sel')?.value || 'new';
+  const stageNow = stage;
   const data = {
     client: { name, phone: document.getElementById('of-phone')?.value.trim()||'' },
     address: document.getElementById('of-addr')?.value.trim()||'',
     deadline: document.getElementById('of-deadline')?.value||'',
+    contactDate: document.getElementById('of-contact')?.value || TODAY,
     comment: document.getElementById('of-comment')?.value.trim()||'',
     stage,
+    completionDate: stageNow==='done' ? (ordEditId && orders.find(x=>x.id===ordEditId)?.completionDate || TODAY) : (stageNow!=='done' ? '' : TODAY),
     products: ordProducts.filter(p=>p.name),
     ingredients: ordIngredients.filter(g=>g.name),
   };
@@ -2884,10 +2906,24 @@ function renderOrders() {
 
   const filtered = ordStageFilter==='all' ? orders : orders.filter(o=>o.stage===ordStageFilter);
 
-  let h = `<div class="cal-toggle">
+  const ordActive = orders.filter(o=>o.stage!=='done'&&o.stage!=='cancelled').length;
+  const ordDoneCount = orders.filter(o=>o.stage==='done').length;
+  const ordRevTotal = orders.filter(o=>o.stage!=='cancelled').reduce((s,o)=>s+ordTotal(o),0);
+  const ordPct = orders.length ? Math.round(ordDoneCount/orders.length*100) : 0;
+  document.getElementById('hs').textContent = `${ordDoneCount} из ${orders.length} · ${ordRevTotal.toLocaleString('ru')} ₽`;
+  let h = `<div class="pc">
+    <div class="pt"><span class="pl">Заказы</span><span class="pp">${ordPct}%</span></div>
+    <div class="pb"><div class="pf" style="width:${ordPct}%"></div></div>
+    <div class="sg">
+      <div class="sst"><div class="sv">${ordActive}</div><div class="sl">Активных</div></div>
+      <div class="sst"><div class="sv" style="color:var(--teal)">${ordDoneCount}</div><div class="sl">Выполнено</div></div>
+      <div class="sst"><div class="sv">${orders.filter(o=>o.stage==='production').length}</div><div class="sl">В работе</div></div>
+      <div class="sst"><div class="sv" style="color:var(--teal)">${ordRevTotal.toLocaleString('ru')} ₽</div><div class="sl">Выручка</div></div>
+    </div>
+  </div>
+  <div class="cal-toggle">
     <button class="cal-toggle-btn${!ordCalMode?' on':''}" onclick="setOrdCalMode(false)">📋 Список</button>
     <button class="cal-toggle-btn${ordCalMode?' on':''}" onclick="setOrdCalMode(true)">📅 Календарь</button>
-    <button class="cal-toggle-btn" onclick="openWarehouse()" style="background:var(--bg);color:var(--text);flex:none;padding:8px 12px">🏪</button>
     <button class="cal-toggle-btn" onclick="openOrdForm()" style="background:var(--teal);color:#fff;flex:none;padding:8px 14px">+ Заказ</button>
   </div>`;
 
@@ -2960,6 +2996,8 @@ function ordCardHTML(o) {
     ${total?`<div class="ord-price">${total.toLocaleString('ru')} ₽</div>
     <div class="ord-margin">Себест.: ${cost.toLocaleString('ru')} ₽ &nbsp;|&nbsp; Прибыль: <span style="color:${margin>=0?'var(--teal)':'var(--red)'};font-weight:700">${margin.toLocaleString('ru')} ₽</span></div>`:''}
     ${o.address?`<div class="ord-addr" onclick="openMap('${o.address.replace(/'/g,"\\'")}')">📍 ${o.address}</div>`:''}
+    ${o.contactDate?`<div class="ord-deadline">📆 Обращение: ${new Date(o.contactDate+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'})}</div>`:''}
+    ${o.completionDate?`<div class="ord-deadline" style="color:var(--teal)">✅ Завершён: ${new Date(o.completionDate+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'})}</div>`:''}
     <div class="ord-actions">
       <button class="ord-action-btn" onclick="openOrdForm(${o.id})">✏️ Редактировать</button>
       <button class="ord-action-btn" onclick="quickOrdStage(${o.id})">🔄 Стадия</button>
@@ -2976,6 +3014,8 @@ function quickOrdStage(id) {
   const idx = keys.indexOf(cur);
   const next = keys[(idx+1) % keys.length];
   o.stage = next;
+  if (next === 'done' && !o.completionDate) o.completionDate = TODAY;
+  if (next !== 'done') o.completionDate = '';
   saveOrders(); renderOrders();
   toastInfo('Статус: ' + ORD_STAGES[next].l, '№'+o.num);
 }
@@ -3226,6 +3266,199 @@ function selectWhItem(whId) {
   renderOrdForm(o);
   updateOrdTotals();
   toastInfo(`${w.name}: ${w.qty} ${w.unit||'шт'} осталось`, '📦 Склад обновлён');
+}
+
+// ── UNIT DROPDOWN OPTIONS ──
+const UNITS = ['кг','г','шт','л','мл','уп','пач','порц','бут'];
+
+function unitSelect(val, onchange) {
+  return `<select class="ord-prod-qty" style="width:65px" onchange="${onchange}">
+    ${UNITS.map(u => `<option${u===val?' selected':''}>${u}</option>`).join('')}
+  </select>`;
+}
+
+// ── WAREHOUSE MAIN VIEW (renders in #main) ──
+function renderWhMain() {
+  const mc = document.getElementById('main');
+  if (!mc) return;
+  
+  const totalVal = warehouse.reduce((s,w) => s + (+w.qty||0)*(+w.price||0), 0);
+  const lowItems = warehouse.filter(w => w.minQty && (+w.qty) <= (+w.minQty));
+  const whPct = warehouse.length ? Math.round((warehouse.length - lowItems.length) / warehouse.length * 100) : 100;
+  document.getElementById('hs').textContent = `${warehouse.length} позиций · ${totalVal.toLocaleString('ru')} ₽`;
+  let h = `<div class="pc">
+    <div class="pt"><span class="pl">Склад</span><span class="pp" style="color:${lowItems.length?'var(--red)':'var(--teal)'}">${lowItems.length ? lowItems.length+' мало' : 'OK'}</span></div>
+    <div class="pb"><div class="pf" style="width:${whPct}%;background:${lowItems.length?'var(--red)':'var(--teal)'}"></div></div>
+    <div class="sg">
+      <div class="sst"><div class="sv">${warehouse.length}</div><div class="sl">Позиций</div></div>
+      <div class="sst"><div class="sv" style="color:var(--teal)">${totalVal.toLocaleString('ru')} ₽</div><div class="sl">Стоимость</div></div>
+      <div class="sst"><div class="sv" style="color:${lowItems.length?'var(--red)':'var(--text)'}">${lowItems.length}</div><div class="sl">Мало</div></div>
+      <div class="sst"><div class="sv">${warehouse.filter(w=>(+w.qty||0)===0).length}</div><div class="sl">Закончилось</div></div>
+    </div>
+  </div>`;
+
+  // Add form
+  h += `<div class="ord-section" style="margin-bottom:12px">
+    <div class="ord-section-title">Добавить товар</div>
+    <div class="ord-field"><span class="ord-field-lbl">Название</span><input class="ord-field-in" id="wh-new-name" placeholder="Название товара"></div>
+    <div class="ord-field">
+      <span class="ord-field-lbl">Количество</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="ord-field-in" id="wh-new-qty" type="number" placeholder="0" min="0" step="0.1" style="width:80px;text-align:right">
+        <select id="wh-new-unit" class="ord-prod-qty" style="width:65px;flex-shrink:0">
+          ${UNITS.map(u=>`<option>${u}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="ord-field"><span class="ord-field-lbl">Цена ₽</span><input class="ord-field-in" id="wh-new-price" type="number" placeholder="0" min="0"></div>
+    <div class="ord-field"><span class="ord-field-lbl">Мин. остаток</span><input class="ord-field-in" id="wh-new-min" type="number" placeholder="1" min="0" step="0.1" value="1"></div>
+    <div style="padding:10px 14px"><button onclick="saveWhItemMain()" style="width:100%;padding:12px;border-radius:12px;background:var(--teal);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer">+ Добавить</button></div>
+  </div>`;
+
+  // Items list
+  if (!warehouse.length) {
+    h += '<div class="emp">Склад пуст</div>';
+  } else {
+    warehouse.forEach(w => {
+      const low = w.minQty && (+w.qty) <= (+w.minQty);
+      h += `<div class="wh-item">
+        <div class="wh-item-info">
+          <div class="wh-item-name">${w.name}${low?' <span style="color:var(--red);font-size:11px">⚠️ мало</span>':''}</div>
+          <div class="wh-item-meta">${w.price?w.price+' ₽/'+( w.unit||'шт'):''} ${w.minQty?'· мин: '+w.minQty:''}</div>
+        </div>
+        <div class="wh-qty-ctrl">
+          <button class="wh-qty-btn" onclick="whAdjustMain(${w.id},-1)">−</button>
+          <div class="wh-qty-val${low?' low':''}" onclick="whManualEdit(${w.id})" style="cursor:pointer">${(+w.qty||0)} ${w.unit||''}</div>
+          <button class="wh-qty-btn" onclick="whAdjustMain(${w.id},1)">+</button>
+        </div>
+        <button class="wh-del-btn" onclick="whDeleteMain(${w.id})">🗑</button>
+      </div>`;
+    });
+  }
+  mc.innerHTML = h;
+}
+
+function saveWhItemMain() {
+  const name = document.getElementById('wh-new-name')?.value.trim();
+  if (!name) { alert('Введи название'); return; }
+  const qty = +(document.getElementById('wh-new-qty')?.value || 0);
+  const unit = document.getElementById('wh-new-unit')?.value || 'шт';
+  const price = +(document.getElementById('wh-new-price')?.value || 0);
+  const minQty = +(document.getElementById('wh-new-min')?.value || 1);
+  warehouse.push({ id: Date.now(), name, qty, unit, price, minQty });
+  saveWarehouse();
+  renderWhMain();
+  toastSuccess('Товар добавлен', name);
+}
+function whAdjustMain(id, d) { const w=warehouse.find(x=>x.id===id); if(w){w.qty=Math.max(0,(+w.qty||0)+d);saveWarehouse();renderWhMain();} }
+function whDeleteMain(id) { if(!confirm('Удалить?'))return; warehouse=warehouse.filter(x=>x.id!==id); saveWarehouse(); renderWhMain(); }
+
+// ── PRICE LIST ──
+let priceList = [];
+let priceFilter = 'all';
+
+function loadPriceList() {
+  const raw = tryLS(() => localStorage.getItem('mk_price'), null);
+  if (raw) try { priceList = JSON.parse(raw); } catch(e) { priceList = []; }
+}
+function savePriceList() {
+  tryLS(() => localStorage.setItem('mk_price', JSON.stringify(priceList)));
+  scheduleSync();
+}
+
+function renderPrice() {
+  const mc = document.getElementById('main');
+  if (!mc) return;
+  
+  const cats = [...new Set(priceList.map(p => p.cat||'Общее'))];
+  const filtered = priceFilter==='all' ? priceList : priceList.filter(p => (p.cat||'Общее')===priceFilter);
+
+  let h = `<div class="ord-stage-bar">
+    <button class="ord-sf${priceFilter==='all'?' on':''}" style="background:var(--card);color:var(--text)" onclick="setPriceFilter('all')">Все</button>
+    ${cats.map(c=>`<button class="ord-sf${priceFilter===c?' on':''}" style="background:var(--teal-l);color:var(--teal-d)" onclick="setPriceFilter('${c}')">${c}</button>`).join('')}
+  </div>`;
+
+  // Add form
+  h += `<div class="ord-section" style="margin-bottom:12px">
+    <div class="ord-section-title">Добавить позицию</div>
+    <div class="ord-field"><span class="ord-field-lbl">Наименование</span><input class="ord-field-in" id="pl-new-name" placeholder="Название"></div>
+    <div class="ord-field"><span class="ord-field-lbl">Категория</span><input class="ord-field-in" id="pl-new-cat" placeholder="Колбаса, Лакомства..."></div>
+    <div class="ord-field"><span class="ord-field-lbl">Цена ₽</span><input class="ord-field-in" id="pl-new-price" type="number" placeholder="0" min="0"></div>
+    <div class="ord-field">
+      <span class="ord-field-lbl">Вес/Ед.</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="ord-field-in" id="pl-new-weight" type="number" placeholder="500" min="0" style="width:80px;text-align:right">
+        <select id="pl-new-wunit" class="ord-prod-qty" style="width:65px;flex-shrink:0">
+          ${UNITS.map(u=>`<option>${u}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div style="padding:10px 14px"><button onclick="savePriceItem()" style="width:100%;padding:12px;border-radius:12px;background:var(--teal);color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer">+ Добавить</button></div>
+  </div>`;
+
+  // Table
+  if (!filtered.length) {
+    h += '<div class="emp">Прайс-лист пуст</div>';
+  } else {
+    h += `<div class="ord-section">
+      <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;border-bottom:1.5px solid var(--border2)">
+        <div style="padding:8px 14px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Наименование</div>
+        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Вес</div>
+        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase">Цена</div>
+        <div style="padding:8px 10px;font-size:11px;font-weight:700;color:var(--text3)"></div>
+      </div>`;
+    filtered.forEach(p => {
+      h += `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;border-top:0.5px solid var(--border2);align-items:center">
+        <div style="padding:10px 14px">
+          <div style="font-size:14px;font-weight:600;color:var(--text)">${p.name}</div>
+          <div style="font-size:11px;color:var(--text3)">${p.cat||'Общее'}</div>
+        </div>
+        <div style="padding:10px;font-size:13px;color:var(--text2)">${p.weight?p.weight+' '+(p.wunit||'г'):'-'}</div>
+        <div style="padding:10px;font-size:14px;font-weight:700;color:var(--teal)">${p.price?p.price+' ₽':'-'}</div>
+        <button onclick="deletePriceItem(${p.id})" style="background:none;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:10px">🗑</button>
+      </div>`;
+    });
+    h += '</div>';
+  }
+  mc.innerHTML = h;
+}
+
+function setPriceFilter(cat) { priceFilter = cat; renderPrice(); }
+function savePriceItem() {
+  const name = document.getElementById('pl-new-name')?.value.trim();
+  if (!name) { alert('Введи название'); return; }
+  priceList.push({
+    id: Date.now(),
+    name,
+    cat: document.getElementById('pl-new-cat')?.value.trim() || 'Общее',
+    price: +(document.getElementById('pl-new-price')?.value || 0),
+    weight: document.getElementById('pl-new-weight')?.value || '',
+    wunit: document.getElementById('pl-new-wunit')?.value || 'г'
+  });
+  savePriceList();
+  renderPrice();
+  toastSuccess('Добавлено в прайс', name);
+}
+function deletePriceItem(id) {
+  if (!confirm('Удалить из прайса?')) return;
+  priceList = priceList.filter(x => x.id !== id);
+  savePriceList();
+  renderPrice();
+}
+
+// ── DOUBLE TAP NAV ──
+const _navTapTimes = {};
+function handleNavTap(view, doubleTapFn) {
+  const now = Date.now();
+  const last = _navTapTimes[view] || 0;
+  if (now - last < 400 && curV === view) {
+    // Double tap — open form
+    doubleTapFn && doubleTapFn();
+    _navTapTimes[view] = 0;
+  } else {
+    _navTapTimes[view] = now;
+    sv(view);
+  }
 }
 
 // ── VK API ──
@@ -3516,6 +3749,7 @@ try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: 
 try{loadCats();}catch(e){}
 try{loadOrders();}catch(e){}
 try{loadWarehouse();}catch(e){}
+try{loadPriceList();}catch(e){}
 try{loadSyncSettings();}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
