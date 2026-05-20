@@ -1975,30 +1975,29 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
-// ── SUPABASE REALTIME SYNC (no SDK) ──
+// ── SUPABASE REALTIME SYNC ──
 const SB_URL = 'https://fywikdfxisrfqtpmntxf.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5d2lrZGZ4aXNyZnF0cG1udHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjg2OTEsImV4cCI6MjA5NDg0NDY5MX0.OEZ7v3P6YcRBrPQbG04qWqBI9DYpy3KSkwcfsRtBHNk';
 const SB_TABLE = 'sync_data';
 let sbSyncKey = '';
-let _sbWs = null;
-let _sbIgnoreNext = false;
 let _sbPollTimer = null;
+let _sbSaving = false;
+let _sbLastRemote = 0;
 
-const sbHeaders = {
+const sbH = {
   'apikey': SB_KEY,
   'Authorization': 'Bearer ' + SB_KEY,
   'Content-Type': 'application/json',
-  'Prefer': 'return=minimal'
+  'Prefer': 'resolution=merge-duplicates,return=minimal'
 };
 
 function loadSyncSettings() {
   sbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
-  if (sbSyncKey && sbSyncKey.length >= 3) setTimeout(startSupabaseSync, 2000);
-  // Don't show sync bar if no key configured
+  if (sbSyncKey && sbSyncKey.length >= 3) setTimeout(startSupabaseSync, 1000);
 }
 
 function setSyncStatus(state, msg) {
-  if (!sbSyncKey && state !== 'ok') return; // silent if no key configured
+  if (!sbSyncKey && state === 'err') return;
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-lbl');
   const bar = document.getElementById('sync-bar');
@@ -2013,142 +2012,109 @@ function setSyncStatus(state, msg) {
 }
 
 async function sbSave() {
-  if (!sbSyncKey) return;
-  _sbIgnoreNext = true;
+  if (!sbSyncKey || _sbSaving) return;
+  _sbSaving = true;
   const now = Date.now();
-  const data = {
+  const payload = {
     tasks: tasks.map(t => ({...t, aiH: []})),
     links: quickLinks,
     customCats: customCats,
     savedAt: now
   };
   tryLS(() => localStorage.setItem('mk_saved_at', now));
+  _sbLastRemote = now; // mark so poll ignores this save
   try {
     const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {
-      method: 'POST',
-      headers: {...sbHeaders, 'Prefer': 'resolution=merge-duplicates,return=minimal'},
-      body: JSON.stringify({ key: sbSyncKey, data, updated_at: new Date().toISOString() })
+      method: 'POST', headers: sbH,
+      body: JSON.stringify({ key: sbSyncKey, data: payload, updated_at: new Date().toISOString() })
     });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) { const t = await r.text(); throw new Error(r.status + ': ' + t.slice(0,80)); }
     setSyncStatus('ok', '🟢 Сохранено');
-    setTimeout(() => { _sbIgnoreNext = false; }, 1500);
   } catch(e) {
     setSyncStatus('err', '✗ ' + e.message);
-    _sbIgnoreNext = false;
   }
+  _sbSaving = false;
 }
 
 async function sbLoad(silent, force) {
   if (!sbSyncKey || sbSyncKey.length < 3) return;
-  if (!silent) setSyncStatus('busy', '🔄 Загрузка...');
   try {
     const r = await fetch(
-      SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + encodeURIComponent(sbSyncKey) + '&select=data,updated_at',
-      { headers: sbHeaders, cache: 'no-store' }
+      SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + encodeURIComponent(sbSyncKey) + '&select=data',
+      { headers: sbH, cache: 'no-store' }
     );
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const rows = await r.json();
-    if (!rows.length) { setSyncStatus('ok', '🟢 Нет данных на сервере'); return; }
+    if (!rows.length) { if(!silent) { setSyncStatus('ok','🟢 Нет данных на сервере'); toastInfo('Нет данных','Сохрани данные с этого устройства'); } return; }
     const remote = rows[0].data;
+    if (!remote || !remote.savedAt) return;
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    // Force always applies remote, otherwise only if newer
-    if (force || remote.savedAt > localTime + 500) {
+    // Apply if: forced, or remote is newer, or remote differs from what we last sent
+    if (force || remote.savedAt > localTime + 200) {
+      if (remote.savedAt === _sbLastRemote && !force) return; // this is our own save
       window._noSyncSave = true;
       tasks = remote.tasks || [];
-      tasks.forEach(t => { if(!t.aiH) t.aiH=[]; });
+      tasks.forEach(t => { if(!t.aiH) t.aiH = []; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
-      tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt || Date.now()));
+      _sbLastRemote = remote.savedAt;
+      tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
       window._noSyncSave = false;
-      if (!silent) toastSuccess('Синхронизация', '↓ Данные загружены с сервера');
+      setSyncStatus('ok', '🟢 Обновлено');
+      if (!silent) toastSuccess('Синхронизация', '↓ Данные загружены');
     } else {
+      setSyncStatus('ok', '🟢 Онлайн');
       if (!silent) toastInfo('Синхронизация', '✓ Данные актуальны');
     }
-    setSyncStatus('ok', '🟢 Онлайн');
   } catch(e) {
     setSyncStatus('err', '✗ ' + e.message);
     if (!silent) toastError('Ошибка загрузки', e.message);
   }
 }
 
-function startSupabaseWS() {
-  if (!sbSyncKey) return;
-  const wsUrl = SB_URL.replace('https://', 'wss://') +
-    '/realtime/v1/websocket?apikey=' + SB_KEY + '&vsn=1.0.0';
-  try {
-    if (_sbWs) { _sbWs.close(); _sbWs = null; }
-    _sbWs = new WebSocket(wsUrl);
-    _sbWs.onopen = () => {
-      setSyncStatus('ok', '🟢 Онлайн');
-      // Join channel for this table+key
-      _sbWs.send(JSON.stringify({
-        topic: 'realtime:public:sync_data:key=eq.' + sbSyncKey,
-        event: 'phx_join',
-        payload: { config: { broadcast: { self: false }, postgres_changes: [{ event: 'UPDATE', schema: 'public', table: SB_TABLE }] } },
-        ref: '1'
-      }));
-    };
-    _sbWs.onmessage = (msg) => {
-      try {
-        const d = JSON.parse(msg.data);
-        if (d.event === 'postgres_changes' || (d.payload && d.payload.data)) {
-          if (_sbIgnoreNext) { _sbIgnoreNext = false; return; }
-          sbLoad(true);
-        }
-      } catch(e) {}
-    };
-    _sbWs.onerror = () => { setSyncStatus('err', '✗ WS ошибка'); startFallbackPoll(); };
-    _sbWs.onclose = () => { setTimeout(() => { if(sbSyncKey) startSupabaseWS(); }, 5000); };
-  } catch(e) {
-    startFallbackPoll();
-  }
-}
-
-function startFallbackPoll() {
-  // Poll every 5 seconds if WebSocket not available
-  clearInterval(_sbPollTimer);
-  _sbPollTimer = setInterval(() => { if(sbSyncKey && !_sbIgnoreNext) sbLoad(true); }, 5000);
-  setSyncStatus('ok', '🟢 Онлайн (poll)');
-}
-
 function startSupabaseSync() {
   if (!sbSyncKey) return;
-  sbLoad(false);
-  startSupabaseWS();
-  // Also poll on visibility change
+  // Load immediately on start
+  sbLoad(false, false);
+  // Poll every 3 seconds
+  clearInterval(_sbPollTimer);
+  _sbPollTimer = setInterval(() => { if(sbSyncKey && !_sbSaving) sbLoad(true, false); }, 3000);
+  // Poll on tab focus
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && sbSyncKey) sbLoad(true);
+    if (!document.hidden && sbSyncKey) sbLoad(true, false);
   });
+  setSyncStatus('ok', '🟢 Онлайн');
 }
 
 function stopSupabaseSync() {
-  if (_sbWs) { _sbWs.close(); _sbWs = null; }
   clearInterval(_sbPollTimer);
+  _sbPollTimer = null;
 }
 
 async function openSyncSett() {
   const status = sbSyncKey ? '🟢 Ключ: ' + sbSyncKey : 'Не настроено';
-  const action = prompt('🔄 Синхронизация\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Загрузить\n4 - Отключить\n\nНомер:');
+  const action = prompt('🔄 Синхронизация\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Загрузить с сервера\n4 - Отключить\n\nНомер:');
   if (action === '1') {
-    const key = prompt('Ключ (одинаковый на всех устройствах):\nПример: mamina-kolbasa', sbSyncKey);
+    const key = prompt('Ключ синхронизации:\n(одинаковый на всех устройствах)', sbSyncKey);
     if (key && key.trim().length >= 3) {
       stopSupabaseSync();
-      sbSyncKey = key.trim().replace(/[^\w-]/g, '-');
+      sbSyncKey = key.trim().replace(/[^\w\-а-яА-Я]/g, '-');
       tryLS(() => localStorage.setItem('mk_fb_key', sbSyncKey));
+      await sbSave();
       startSupabaseSync();
       toastSuccess('Ключ установлен!', '🟢 Синхронизация запущена');
     } else if (key !== null) alert('Минимум 3 символа');
   } else if (action === '2') {
-    if (!sbSyncKey) { toastError('Сначала установи ключ', ''); return; }
+    if (!sbSyncKey) { toastError('Сначала установи ключ',''); return; }
     await sbSave();
   } else if (action === '3') {
-    if (!sbSyncKey) { toastError('Сначала установи ключ', ''); return; }
-    await sbLoad(false, true); // force override local data
+    if (!sbSyncKey) { toastError('Сначала установи ключ',''); return; }
+    await sbLoad(false, true);
   } else if (action === '4') {
     stopSupabaseSync(); sbSyncKey = '';
     tryLS(() => localStorage.removeItem('mk_fb_key'));
-    toastInfo('Синхронизация отключена', '');
+    toastInfo('Синхронизация отключена','');
     document.getElementById('sync-bar')?.classList.remove('show');
   }
 }
@@ -2156,7 +2122,7 @@ async function openSyncSett() {
 function scheduleSync() {
   if (window._noSyncSave) return;
   clearTimeout(window._syncTimer);
-  window._syncTimer = setTimeout(() => { if(sbSyncKey) sbSave(); }, 1000);
+  window._syncTimer = setTimeout(() => { if(sbSyncKey) sbSave(); }, 500);
 }
 
 // ── QUICK TAG PICKER ──
@@ -2610,7 +2576,7 @@ function initPTR() {
       if(lbl) lbl.textContent = '↻ Обновляю...';
       setTimeout(() => {
         if (sbSyncKey) {
-          sbLoad(false, true).then(() => { ind.classList.remove('show'); });
+          sbLoad(false, true).then(() => { setTimeout(()=>ind.classList.remove('show'), 500); });
         } else {
           render();
           setTimeout(() => ind.classList.remove('show'), 400);
