@@ -3514,7 +3514,15 @@ function handleNavTap(view, doubleTapFn) {
   const now = Date.now();
   const last = _navTapTimes[view] || 0;
   if (now - last < 400 && curV === view) {
-    /
+    // Double tap — open form
+    doubleTapFn && doubleTapFn();
+    _navTapTimes[view] = 0;
+  } else {
+    _navTapTimes[view] = now;
+    sv(view);
+  }
+}
+
 // ── GLOBAL NAVIGATION SWIPES ──
 function initViewSwipes() {
   const wrap = document.getElementById('wrap');
