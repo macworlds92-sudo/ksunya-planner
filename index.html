@@ -1975,35 +1975,23 @@ function toastInfo(title, sub) { return toast('success', 'ℹ️', title, sub, 2
 
 // ── SW & UPDATES ──
 let _newSW=null;
-// ── SUPABASE REALTIME SYNC ──
-const SB_URL = 'https://fywikdfxisrfqtpmntxf.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5d2lrZGZ4aXNyZnF0cG1udHhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNjg2OTEsImV4cCI6MjA5NDg0NDY5MX0.OEZ7v3P6YcRBrPQbG04qWqBI9DYpy3KSkwcfsRtBHNk';
-const SB_TABLE = 'sync_data';
-let sbSyncKey = '';
-let _sbPollTimer = null;
-let _sbSaving = false;
-let _sbLastRemote = 0;
-
-// GET: minimal headers (no preflight)
-const sbHGet = {
-  'apikey': SB_KEY,
-  'Authorization': 'Bearer ' + SB_KEY
-};
-// POST: full headers
-const sbH = {
-  'apikey': SB_KEY,
-  'Authorization': 'Bearer ' + SB_KEY,
-  'Content-Type': 'application/json',
-  'Prefer': 'resolution=merge-duplicates,return=minimal'
-};
+// ── GITHUB GIST SYNC ──
+const GIST_FILE = 'ksunya-planner.json';
+const GIST_DESC = 'Ksunya-Planner-Sync';
+let ghToken = '';
+let ghGistId = '';
+let _syncTimer = null;
+let _pollTimer = null;
+let _lastRemoteSavedAt = 0;
 
 function loadSyncSettings() {
-  sbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
-  if (sbSyncKey && sbSyncKey.length >= 3) setTimeout(startSupabaseSync, 1000);
+  ghToken = tryLS(() => localStorage.getItem('mk_gh_token') || '', '');
+  ghGistId = tryLS(() => localStorage.getItem('mk_gh_gist') || '', '');
+  if (ghToken) setTimeout(startGistSync, 1500);
 }
 
 function setSyncStatus(state, msg) {
-  if (!sbSyncKey) return; // no key - never show sync status
+  if (!ghToken) return;
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-lbl');
   const bar = document.getElementById('sync-bar');
@@ -2012,123 +2000,156 @@ function setSyncStatus(state, msg) {
   lbl.textContent = msg;
   bar.classList.add('show');
   clearTimeout(window._syncBarTimer);
-  if (state !== 'busy' && state !== 'ok') {
+  if (state !== 'busy') {
     window._syncBarTimer = setTimeout(() => bar.classList.remove('show'), 3000);
   }
 }
 
-async function sbSave() {
-  if (!sbSyncKey || _sbSaving) return;
-  _sbSaving = true;
-  const now = Date.now();
-  const payload = {
-    tasks: tasks.map(t => ({...t, aiH: []})),
-    links: quickLinks,
-    customCats: customCats,
-    savedAt: now
-  };
-  tryLS(() => localStorage.setItem('mk_saved_at', now));
-  _sbLastRemote = now; // mark so poll ignores this save
+async function findOrCreateGist() {
+  const h = { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' };
+  if (ghGistId) {
+    try {
+      const r = await fetch('https://api.github.com/gists/' + ghGistId, { headers: h });
+      if (r.ok) return ghGistId;
+    } catch(e) {}
+  }
+  // Search existing gists
   try {
-    const r = await fetch(SB_URL + '/rest/v1/' + SB_TABLE, {
-      method: 'POST', headers: sbH,
-      body: JSON.stringify({ key: sbSyncKey, data: payload, updated_at: new Date().toISOString() })
+    const r = await fetch('https://api.github.com/gists?per_page=100', { headers: h });
+    if (r.ok) {
+      const list = await r.json();
+      const found = list.find(g => g.description === GIST_DESC && g.files[GIST_FILE]);
+      if (found) {
+        ghGistId = found.id;
+        tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
+        return ghGistId;
+      }
+    }
+  } catch(e) {}
+  // Create new
+  const r = await fetch('https://api.github.com/gists', {
+    method: 'POST', headers: h,
+    body: JSON.stringify({
+      description: GIST_DESC, public: false,
+      files: { [GIST_FILE]: { content: JSON.stringify({ tasks: [], savedAt: 0 }) } }
+    })
+  });
+  if (!r.ok) throw new Error('Gist create failed: ' + r.status);
+  const d = await r.json();
+  ghGistId = d.id;
+  tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
+  return ghGistId;
+}
+
+async function gistSave() {
+  if (!ghToken) return;
+  setSyncStatus('busy', 'Сохраняю...');
+  try {
+    const id = await findOrCreateGist();
+    const now = Date.now();
+    const data = {
+      tasks: tasks.map(t => ({...t, aiH: []})),
+      links: quickLinks,
+      customCats: customCats,
+      savedAt: now
+    };
+    const h = { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' };
+    const r = await fetch('https://api.github.com/gists/' + id, {
+      method: 'PATCH', headers: h,
+      body: JSON.stringify({ files: { [GIST_FILE]: { content: JSON.stringify(data) } } })
     });
-    if (!r.ok) { const t = await r.text(); throw new Error(r.status + ': ' + t.slice(0,80)); }
-    setSyncStatus('ok', '🟢 Сохранено');
+    if (!r.ok) throw new Error('Save failed: ' + r.status);
+    tryLS(() => localStorage.setItem('mk_saved_at', now));
+    setSyncStatus('ok', '✓ Сохранено');
   } catch(e) {
     setSyncStatus('err', '✗ ' + e.message);
   }
-  _sbSaving = false;
 }
 
-async function sbLoad(silent, force) {
-  if (!sbSyncKey || sbSyncKey.length < 3) return;
+async function gistLoad(silent, force) {
+  if (!ghToken) return;
+  if (!silent) setSyncStatus('busy', 'Загружаю...');
   try {
-    const r = await fetch(
-      SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + encodeURIComponent(sbSyncKey) + '&select=data',
-      { headers: sbHGet, cache: 'no-store' }
-    );
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const rows = await r.json();
-    if (!rows.length) { if(!silent) { setSyncStatus('ok','🟢 Нет данных на сервере'); toastInfo('Нет данных','Сохрани данные с этого устройства'); } return; }
-    const remote = rows[0].data;
-    if (!remote || !remote.savedAt) return;
+    const id = await findOrCreateGist();
+    const h = { 'Authorization': 'token ' + ghToken };
+    const r = await fetch('https://api.github.com/gists/' + id + '?t=' + Date.now(), { headers: h, cache: 'no-store' });
+    if (!r.ok) throw new Error('Load failed: ' + r.status);
+    const d = await r.json();
+    const content = d.files[GIST_FILE]?.content;
+    if (!content) { if (!silent) setSyncStatus('ok', '✓ Нет данных'); return; }
+    const remote = JSON.parse(content);
     const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
-    // Apply if: forced, or remote is newer, or remote differs from what we last sent
-    if (force || remote.savedAt > localTime + 200) {
-      if (remote.savedAt === _sbLastRemote && !force) return; // this is our own save
+    if (force || remote.savedAt > localTime + 500) {
+      if (!force && remote.savedAt === _lastRemoteSavedAt) return;
+      _lastRemoteSavedAt = remote.savedAt;
       window._noSyncSave = true;
       tasks = remote.tasks || [];
-      tasks.forEach(t => { if(!t.aiH) t.aiH = []; });
+      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
       if (remote.links) quickLinks = remote.links;
       if (remote.customCats) customCats = remote.customCats;
-      _sbLastRemote = remote.savedAt;
       tryLS(() => localStorage.setItem('mk_saved_at', remote.savedAt));
       render();
       window._noSyncSave = false;
-      setSyncStatus('ok', '🟢 Обновлено');
+      setSyncStatus('ok', '✓ Обновлено');
       if (!silent) toastSuccess('Синхронизация', '↓ Данные загружены');
     } else {
-      setSyncStatus('ok', '🟢 Онлайн');
+      setSyncStatus('ok', '✓ Актуально');
       if (!silent) toastInfo('Синхронизация', '✓ Данные актуальны');
     }
   } catch(e) {
     setSyncStatus('err', '✗ ' + e.message);
-    if (!silent) toastError('Ошибка загрузки', e.message);
+    if (!silent) toastError('Ошибка', e.message);
   }
 }
 
-function startSupabaseSync() {
-  if (!sbSyncKey) return;
-  // Load immediately on start
-  sbLoad(false, false);
-  // Poll every 3 seconds
-  clearInterval(_sbPollTimer);
-  _sbPollTimer = setInterval(() => { if(sbSyncKey && !_sbSaving) sbLoad(true, false); }, 3000);
-  // Poll on tab focus
+function startGistSync() {
+  if (!ghToken) return;
+  gistLoad(false, false);
+  clearInterval(_pollTimer);
+  _pollTimer = setInterval(() => { if (ghToken) gistLoad(true, false); }, 15000);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && sbSyncKey) sbLoad(true, false);
+    if (!document.hidden && ghToken) gistLoad(true, false);
   });
-  setSyncStatus('ok', '🟢 Онлайн');
 }
 
-function stopSupabaseSync() {
-  clearInterval(_sbPollTimer);
-  _sbPollTimer = null;
+function stopGistSync() {
+  clearInterval(_pollTimer);
+  _pollTimer = null;
 }
 
 async function openSyncSett() {
-  const status = sbSyncKey ? '🟢 Ключ: ' + sbSyncKey : 'Не настроено';
-  const action = prompt('🔄 Синхронизация\n\nСтатус: ' + status + '\n\n1 - Установить ключ\n2 - Сохранить сейчас\n3 - Загрузить с сервера\n4 - Отключить\n\nНомер:');
+  const status = ghToken ? '✓ Подключено' : 'Не настроено';
+  const action = prompt('🔄 Синхронизация (GitHub Gist)\n\nСтатус: ' + status + '\n\n1 — Ввести токен GitHub\n2 — Сохранить сейчас\n3 — Загрузить с сервера\n4 — Отключить\n\nНомер:');
   if (action === '1') {
-    const key = prompt('Ключ синхронизации:\n(одинаковый на всех устройствах)', sbSyncKey);
-    if (key && key.trim().length >= 3) {
-      stopSupabaseSync();
-      sbSyncKey = key.trim().replace(/[^\w\-а-яА-Я]/g, '-');
-      tryLS(() => localStorage.setItem('mk_fb_key', sbSyncKey));
-      await sbSave();
-      startSupabaseSync();
-      toastSuccess('Ключ установлен!', '🟢 Синхронизация запущена');
-    } else if (key !== null) alert('Минимум 3 символа');
+    const tok = prompt('Токен GitHub (scope: gist)\ngithub.com/settings/tokens → Tokens (classic) → ✅ gist\n\nВставь:', ghToken);
+    if (tok !== null && tok.trim().length > 10) {
+      stopGistSync();
+      ghToken = tok.trim();
+      ghGistId = '';
+      tryLS(() => localStorage.setItem('mk_gh_token', ghToken));
+      tryLS(() => localStorage.removeItem('mk_gh_gist'));
+      await gistSave();
+      startGistSync();
+      toastSuccess('Токен сохранён', '✓ Синхронизация запущена');
+    }
   } else if (action === '2') {
-    if (!sbSyncKey) { toastError('Сначала установи ключ',''); return; }
-    await sbSave();
+    if (!ghToken) { toastError('Нет токена', ''); return; }
+    await gistSave();
   } else if (action === '3') {
-    if (!sbSyncKey) { toastError('Сначала установи ключ',''); return; }
-    await sbLoad(false, true);
+    if (!ghToken) { toastError('Нет токена', ''); return; }
+    await gistLoad(false, true);
   } else if (action === '4') {
-    stopSupabaseSync(); sbSyncKey = '';
-    tryLS(() => localStorage.removeItem('mk_fb_key'));
-    toastInfo('Синхронизация отключена','');
-    document.getElementById('sync-bar')?.classList.remove('show');
+    stopGistSync(); ghToken = ''; ghGistId = '';
+    tryLS(() => localStorage.removeItem('mk_gh_token'));
+    tryLS(() => localStorage.removeItem('mk_gh_gist'));
+    toastInfo('Синхронизация отключена', '');
   }
 }
 
 function scheduleSync() {
   if (window._noSyncSave) return;
-  clearTimeout(window._syncTimer);
-  window._syncTimer = setTimeout(() => { if(sbSyncKey) sbSave(); }, 500);
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => { if (ghToken) gistSave(); }, 2000);
 }
 
 // ── QUICK TAG PICKER ──
@@ -2582,7 +2603,7 @@ function initPTR() {
       if(lbl) lbl.textContent = '↻ Обновляю...';
       setTimeout(() => {
         if (sbSyncKey) {
-          sbLoad(false, true).then(() => { setTimeout(()=>ind.classList.remove('show'), 500); });
+          gistLoad(false, true).then(() => { setTimeout(()=>ind.classList.remove('show'), 500); });
         } else {
           render();
           setTimeout(() => ind.classList.remove('show'), 400);
@@ -2881,7 +2902,7 @@ function speakText(text) {
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
 try{loadCats();}catch(e){}
-try{loadSyncSettings();}catch(e){dbgErr('Sync init: '+e.message);}
+try{loadSyncSettings();}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
 try{initSwipes();dbgOk('Swipes ready');}catch(e){dbgErr('Swipes: '+e.message);}
