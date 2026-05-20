@@ -398,6 +398,11 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .move-sub-item:active{background:var(--bg)}
 .move-sub-num{font-size:11px;font-weight:700;background:var(--bg);color:var(--text3);padding:2px 7px;border-radius:6px;flex-shrink:0}
 .move-sub-title{font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── PULL TO REFRESH ── */
+#ptr-indicator{position:fixed;top:calc(env(safe-area-inset-top,44px) + 58px);left:50%;transform:translateX(-50%) translateY(-80px);z-index:400;background:var(--card);border-radius:50px;padding:10px 20px;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);box-shadow:0 6px 24px rgba(0,0,0,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1),opacity .25s;opacity:0;pointer-events:none}
+#ptr-indicator.show{transform:translateX(-50%) translateY(0);opacity:1}
+#ptr-spinner{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--teal);border-radius:50%;animation:sp .6s linear infinite}
 </style>
 
 <!-- Supabase: direct REST + WebSocket -->
@@ -408,6 +413,7 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 <div id="dbg"></div>
 <button id="dbg-close" onclick="var d=document.getElementById('dbg');var b=document.getElementById('dbg-close');if(d)d.style.display='none';if(b)b.style.display='none'">✕ закрыть</button>
 
+<div id="ptr-indicator"><div id="ptr-spinner"></div><span id="ptr-lbl">Обновление...</span></div>
 <div id="wrap">
   <div id="hdr">
     <div id="sync-bar"><div class="sync-bar-dot" id="sync-dot"></div><span id="sync-lbl"></span></div>
@@ -1987,10 +1993,12 @@ const sbHeaders = {
 
 function loadSyncSettings() {
   sbSyncKey = tryLS(() => localStorage.getItem('mk_fb_key') || '', '');
-  if (sbSyncKey) setTimeout(startSupabaseSync, 1500);
+  if (sbSyncKey && sbSyncKey.length >= 3) setTimeout(startSupabaseSync, 2000);
+  // Don't show sync bar if no key configured
 }
 
 function setSyncStatus(state, msg) {
+  if (!sbSyncKey && state !== 'ok') return; // silent if no key configured
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-lbl');
   const bar = document.getElementById('sync-bar');
@@ -2031,7 +2039,7 @@ async function sbSave() {
 }
 
 async function sbLoad(silent) {
-  if (!sbSyncKey) return;
+  if (!sbSyncKey || sbSyncKey.length < 3) return; // no key — silent
   if (!silent) setSyncStatus('busy', '🔄 Загрузка...');
   try {
     const r = await fetch(
@@ -2101,6 +2109,7 @@ function startFallbackPoll() {
 }
 
 function startSupabaseSync() {
+  if (!sbSyncKey) return;
   sbLoad(false);
   startSupabaseWS();
   // Also poll on visibility change
@@ -2558,6 +2567,58 @@ function doMoveSub(targetId){
   toastSuccess('Подзадача перемещена','→ [No '+dst.num+'] '+dst.title);
 }
 
+// ── PULL TO REFRESH ──
+function initPTR() {
+  let startY = 0, curY = 0, active = false, triggered = false;
+  const ind = document.getElementById('ptr-indicator');
+  const lbl = document.getElementById('ptr-lbl');
+  const wrap = document.getElementById('wrap');
+  if (!wrap || !ind) return;
+
+  wrap.addEventListener('touchstart', e => {
+    const main = document.getElementById('main');
+    if (main && main.scrollTop === 0) {
+      startY = e.touches[0].clientY;
+      active = true;
+      triggered = false;
+    }
+  }, {passive: true});
+
+  wrap.addEventListener('touchmove', e => {
+    if (!active) return;
+    const main = document.getElementById('main');
+    if (!main || main.scrollTop > 2) { active = false; ind.classList.remove('show'); return; }
+    curY = e.touches[0].clientY;
+    const dy = curY - startY;
+    if (dy > 30) {
+      ind.classList.add('show');
+      if (dy > 90) { triggered = true; if(lbl) lbl.textContent = '⬆ Отпустите'; }
+      else { triggered = false; if(lbl) lbl.textContent = '⬇ Потяните ещё...'; }
+    } else {
+      ind.classList.remove('show');
+    }
+  }, {passive: true});
+
+  wrap.addEventListener('touchend', () => {
+    if (!active) return;
+    active = false;
+    if (triggered) {
+      if(lbl) lbl.textContent = '↻ Обновляю...';
+      setTimeout(() => {
+        if (sbSyncKey) {
+          sbLoad(false).then(() => { ind.classList.remove('show'); });
+        } else {
+          render();
+          setTimeout(() => ind.classList.remove('show'), 400);
+        }
+      }, 100);
+    } else {
+      ind.classList.remove('show');
+    }
+    triggered = false;
+  }, {passive: true});
+}
+
 // ── VK API ──
 let vkToken = '';
 const VK_GID = '238718596';
@@ -2852,6 +2913,8 @@ try{initTooltips();dbgOk('Tooltips ready');}catch(e){dbgErr('Tooltips: '+e.messa
 try{initFABManager();dbgOk('FAB ready');}catch(e){dbgErr('FAB: '+e.message);}
 try{applyVoiceFAB();}catch(e){}
 dbgOk('App ready ✓');
+// ── PULL TO REFRESH ──
+initPTR();
 try{scheduleDailyNotif();}catch(e){}
 setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 
