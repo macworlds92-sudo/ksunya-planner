@@ -311,6 +311,93 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 #sync-bar.show{opacity:1}
 .sync-bar-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
 .sync-bar-dot.ok{background:#1D9E75}.sync-bar-dot.err{background:#E24B4A}.sync-bar-dot.busy{background:#BA7517;animation:sp .7s linear infinite}
+
+/* ── TASK STAGES ── */
+.stage-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;border:none;transition:opacity .15s}
+.stage-chip:active{opacity:.7}
+.stage-new{background:#E0EDFC;color:#1251A0}
+.stage-work{background:#D6F0E6;color:#0A5E3F}
+.stage-hold{background:#FBF2DF;color:#8A5500}
+.stage-done{background:#E8F5E1;color:#2A5E10}
+
+/* ── STAGE PICKER ── */
+#stage-picker{position:fixed;z-index:200;background:var(--card);border-radius:14px;padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;flex-direction:column;gap:6px;min-width:160px}
+#stage-picker.show{display:flex}
+.stage-pick-opt{padding:9px 14px;border-radius:10px;border:none;font-size:14px;font-weight:600;cursor:pointer;text-align:left;width:100%}
+
+/* ── CUSTOM CATEGORIES ── */
+.cat-manage-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:0.5px solid var(--border2)}
+.cat-manage-item:last-child{border-bottom:none}
+.cat-color-dot{width:28px;height:28px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px}
+.cat-manage-name{flex:1;font-size:15px;color:var(--text);font-weight:500}
+.cat-del-btn{width:28px;height:28px;border-radius:8px;border:none;background:var(--bg);color:var(--text3);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.add-cat-row{display:flex;gap:8px;padding:12px 14px;border-top:0.5px solid var(--border2)}
+.add-cat-in{flex:1;border:1.5px solid var(--border2);border-radius:10px;padding:8px 12px;font-size:15px;background:var(--bg);color:var(--text);outline:none}
+.add-cat-in:focus{border-color:var(--teal)}
+.add-cat-btn{padding:8px 14px;border-radius:10px;background:var(--teal);color:#fff;border:none;font-size:14px;font-weight:600;cursor:pointer}
+
+/* ── SUBTASK COMMENTS & TAGS ── */
+.sub-ext{padding:0 14px 10px 46px}
+.sub-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.sub-tag{padding:2px 9px;border-radius:12px;background:var(--teal-l);color:var(--teal-d);font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:default}
+.sub-tag-del{background:none;border:none;color:var(--teal-d);font-size:12px;cursor:pointer;padding:0;line-height:1}
+.sub-tag-add{padding:2px 9px;border-radius:12px;border:1.5px dashed var(--border);background:transparent;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer}
+.sub-comments{display:flex;flex-direction:column;gap:5px;margin-bottom:7px}
+.sub-comment{background:var(--bg);border-radius:10px;padding:7px 10px;font-size:13px;color:var(--text2);line-height:1.4;position:relative}
+.sub-comment-time{font-size:10px;color:var(--text3);margin-top:3px}
+.sub-comment-del{position:absolute;top:5px;right:5px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer}
+.sub-add-comment{display:flex;gap:6px;align-items:center}
+.sub-comment-in{flex:1;border:1.5px solid var(--border2);border-radius:10px;padding:7px 10px;font-size:13px;background:var(--bg);color:var(--text);outline:none}
+.sub-comment-in:focus{border-color:var(--teal)}
+.sub-comment-send{width:32px;height:32px;border-radius:10px;background:var(--teal);color:#fff;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sub-toggle-ext{background:none;border:none;color:var(--text3);font-size:11px;cursor:pointer;padding:2px 0 4px;display:flex;align-items:center;gap:3px}
+.sub-toggle-ext.has-data{color:var(--teal)}
+
+/* ── CAT COLORS ── */
+.ck-c0{background:#D6F0E6;color:#0A5E3F}
+.ck-c1{background:#FAF0DB;color:#7A4B0A}
+.ck-c2{background:#E0EDFC;color:#1251A0}
+.ck-c3{background:#EDEAFC;color:#4A44A0}
+.ck-c4{background:#FCE4EC;color:#880E4F}
+.ck-c5{background:#E8F5E9;color:#1B5E20}
+.ck-c6{background:#FFF3E0;color:#E65100}
+.ck-c7{background:#F3E5F5;color:#6A1B9A}
+
+/* ── CALENDAR ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border-radius:16px;margin-bottom:10px}
+.cal-month{font-size:16px;font-weight:700;color:var(--text)}
+.cal-nav{width:34px;height:34px;border-radius:50%;background:var(--bg);border:none;font-size:18px;cursor:pointer;color:var(--text);display:flex;align-items:center;justify-content:center}
+.cal-grid{background:var(--card);border-radius:16px;overflow:hidden;margin-bottom:10px}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg)}
+.cal-wd{text-align:center;padding:6px 0;font-size:11px;font-weight:700;color:var(--text3)}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{min-height:52px;padding:4px;border-top:0.5px solid var(--border2);cursor:pointer;position:relative;display:flex;flex-direction:column}
+.cal-day:active{background:var(--bg)}
+.cal-day.other-month .cal-dn{color:var(--border)}
+.cal-day.today .cal-dn{background:var(--teal);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-day.selected{background:var(--teal-l)}
+.cal-dn{font-size:13px;font-weight:600;color:var(--text);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px;margin-top:1px}
+.cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cal-day-tasks{background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden}
+.cal-day-title{padding:12px 14px 8px;font-size:14px;font-weight:700;color:var(--text);border-bottom:0.5px solid var(--border2)}
+.cal-task-row{padding:10px 14px;border-bottom:0.5px solid var(--border2);display:flex;align-items:center;gap:10px;cursor:pointer}
+.cal-task-row:last-child{border-bottom:none}
+.cal-task-row:active{background:var(--bg)}
+.cal-task-info{flex:1;min-width:0}
+.cal-task-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-task-chips{display:flex;flex-wrap:wrap;gap:4px}
+.cal-toggle{display:flex;gap:6px;margin-bottom:10px}
+.cal-toggle-btn{flex:1;padding:8px;border-radius:10px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--bg);color:var(--text3)}
+.cal-toggle-btn.on{background:var(--teal);color:#fff}
+
+/* ── MOVE SUBTASK ── */
+#move-sub-ol{max-height:75vh}
+.move-sub-item{padding:12px 14px;border-bottom:0.5px solid var(--border2);cursor:pointer;display:flex;align-items:center;gap:10px}
+.move-sub-item:last-child{border-bottom:none}
+.move-sub-item:active{background:var(--bg)}
+.move-sub-num{font-size:11px;font-weight:700;background:var(--bg);color:var(--text3);padding:2px 7px;border-radius:6px;flex-shrink:0}
+.move-sub-title{font-size:14px;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -605,6 +692,7 @@ const prioFull={h:'Высокий',mid:'Средний',l:'Низкий'};
 let apiKey='',curV='today',editId=null,tasks=[];
 let showVoiceFAB=false; // hidden by default
 let searchQ='',searchOpen=false,drFrom='',drTo='',lpTimer=null;
+let calMode=false,calYear=new Date().getFullYear(),calMonth=new Date().getMonth(),calSelDate=null;
 // Chats
 let chats=[]; // [{id,name,created,updated,history:[]}]
 let activeChatId=null;
@@ -708,6 +796,7 @@ function openSett(){
   else if(r==='3'){if(confirm('Сбросить все задачи?')){tasks=initTasks();saveData();render();}}  else if(r==='5'){closeChoice&&closeChoice();openRemindSett();}
     else if(r==='6'){toggleVoiceFAB();}
     else if(r==='7'){openSyncSett();}
+    else if(r==='8'){openCatMgr();}
   else if(r==='4'){const t=prompt('Токен сообщества ВКонтакте:\n(Группа → Управление → Работа с API → Ключи доступа):\n',vkToken||'');if(t!==null){vkToken=t.trim();tryLS(()=>localStorage.setItem('mk_vk_token',vkToken));vkSnap=null;alert(vkToken?'VK токен сохранён ✓':'VK токен удалён');}}
 }
 
@@ -757,6 +846,15 @@ function isOv(t){return !t.done&&t.date<TODAY;}
 
 // ── RENDER ──
 function render(){try{
+  if(curV==='analytics'){
+    const mc=document.getElementById('main');
+    const tot=tasks.length,dn=tasks.filter(t=>t.done).length,pct=tot?Math.round(dn/tot*100):0;
+    document.getElementById('hs').textContent=`${dn} из ${tot} · ${pct}%`;
+    updateInboxBadge&&updateInboxBadge();
+    mc.innerHTML=renderA();return;
+  }
+  if(calMode&&curV==='all'){renderCalendar();return;}
+  if(curV==='all'){renderList();return;}
   const tot=tasks.length,dn=tasks.filter(t=>t.done).length,pct=tot?Math.round(dn/tot*100):0;
   document.getElementById('hs').textContent=`${dn} из ${tot} · ${pct}%`;
   updateInboxBadge&&updateInboxBadge();
@@ -803,14 +901,60 @@ function tcHTML(t,q=''){
   const hAI=t.aiH&&t.aiH.length>0;
   const lastAI=hAI?t.aiH[t.aiH.length-1]:null;
   const lastTxt=lastAI?((Array.isArray(lastAI.content)?lastAI.content.find(c=>c.type==='text')?.text:lastAI.content)||''):'';
-  const subsH=t.exp&&st?`<div class="ss">${t.subs.map((s,i)=>`<div class="sub${s.done?' ds':''}"><div class="sck${s.done?' on':''}" onclick="tSub(${t.id},${i})">✓</div><span class="stx">${hl(s.t,q)}</span></div>`).join('')}</div>`:'';
+  const stage=getStage(t);
+  const stageInfo=STAGES[stage]||STAGES['new'];
+  const catCls=catCssClass(t.cat);
+  const catLbl=catName(t.cat);
+
+  // Subtasks with comments/tags
+  let subsH='';
+  if(t.exp&&st){
+    const subsRows=t.subs.map((s,i)=>{
+      const key=t.id+'_'+i;
+      const expanded=_subExpanded[key];
+      const hasComments=(s.comments||[]).length>0;
+      const hasTags=(s.tags||[]).length>0;
+      const hasData=hasComments||hasTags;
+      let extHtml='';
+      if(expanded){
+        extHtml='<div class="sub-ext">';
+        if(hasTags||true){
+          extHtml+='<div class="sub-tags">';
+          (s.tags||[]).forEach(tag=>{
+            extHtml+=`<span class="sub-tag">#${tag}<button class="sub-tag-del" onclick="delSubTag(${t.id},${i},'${tag}')">✕</button></span>`;
+          });
+          extHtml+=`<button class="sub-tag-add" onclick="addSubTag(${t.id},${i})">+ тег</button>`;
+          extHtml+='</div>';
+        }
+        if(hasComments){
+          extHtml+='<div class="sub-comments">';
+          (s.comments||[]).forEach((c,ci)=>{
+            extHtml+=`<div class="sub-comment">${c.text.replace(/</g,'&lt;')}<button class="sub-comment-del" onclick="delSubComment(${t.id},${i},${ci})">✕</button><div class="sub-comment-time">${fmtTime(c.time)}</div></div>`;
+          });
+          extHtml+='</div>';
+        }
+        extHtml+=`<div class="sub-add-comment"><input class="sub-comment-in" id="sc-in-${t.id}-${i}" placeholder="Добавить комментарий..." onkeydown="if(event.key==='Enter'){addSubComment(${t.id},${i});event.preventDefault()}"><button class="sub-comment-send" onclick="addSubComment(${t.id},${i})">↑</button><button class="sub-comment-send" style="background:var(--text3)" onclick="openMoveSubOl(${t.id},${i})">↗</button></div>`;
+        extHtml+='</div>';
+      }
+      return `<div class="sub${s.done?' ds':''}">
+        <div class="sck${s.done?' on':''}" onclick="tSub(${t.id},${i})">✓</div>
+        <span class="stx" style="flex:1">${hl(s.t,q)}</span>
+        ${hasTags?`<span style="font-size:11px;color:var(--teal-d)">#${(s.tags||[]).length}</span>`:''}
+        ${hasComments?`<span style="font-size:11px;color:var(--text3)">💬${(s.comments||[]).length}</span>`:''}
+        <button class="sub-toggle-ext${hasData?' has-data':''}" onclick="toggleSubExt(${t.id},${i})">${expanded?'▲':'▼'}</button>
+      </div>${extHtml}`;
+    }).join('');
+    subsH='<div class="ss">'+subsRows+'</div>';
+  }
+
   return`<div class="tc${t.done?' dn':''}">
     <div class="tcm"><div class="tr">
       <div class="ck${t.done?' on':''}" onclick="tTask(${t.id})">✓</div>
       <div class="tb">
         <div class="tt"><span class="num-chip">[No ${t.num||'?'}]</span>${hl(t.title,q)}</div>
         <div class="tm">
-          <span class="ch ${catCls[t.cat]}" style="cursor:pointer" onclick="event.stopPropagation();openTagPicker(${t.id},'cat',this)">${catN[t.cat]}</span>
+          <button class="${stageInfo.cls} stage-chip" onclick="event.stopPropagation();openStagePicker(${t.id},this)">${stageInfo.l}</button>
+          <span class="ch ${catCls}" style="cursor:pointer" onclick="event.stopPropagation();openTagPicker(${t.id},'cat',this)">${catLbl}</span>
           <span class="ch ${prioCls[t.prio]}" style="cursor:pointer" onclick="event.stopPropagation();openTagPicker(${t.id},'prio',this)">${prioN[t.prio]}</span>
           ${t.date?`<span class="date-chip-wrap"><span class="ch ch-d${ov?' ov':''} clickable">📅 ${dStr}${ov?' · просрочено':''}</span><input type="date" value="${t.date}" onchange="quickDate(${t.id},this.value)" onclick="event.stopPropagation()"></span>`:''}
         </div>
@@ -837,6 +981,12 @@ function openForm(id){
   document.getElementById('fpr').value=t?t.prio:'h';
   document.getElementById('fdt').value=t?t.date:TODAY;
   editSubs=t?t.subs.map(s=>({...s})):[];renderSubInputs();
+  // Populate cats
+  const fcaEl=document.getElementById('fca');
+  if(fcaEl){fcaEl.innerHTML=allCats().map(c=>`<option value="${c.id}">${c.emoji} ${c.name}</option>`).join('');fcaEl.value=t?t.cat:'k';}
+  // Set stage
+  const fstEl=document.getElementById('fstage');
+  if(fstEl)fstEl.value=t?(t.stage||'new'):'new';
   document.getElementById('fdl').classList.toggle('hidden',!t);
   document.getElementById('tfbg').classList.add('op');document.getElementById('tfol').classList.add('op');
   setTimeout(()=>document.getElementById('fti').focus(),350);
@@ -845,10 +995,10 @@ function closeForm(){document.getElementById('tfbg').classList.remove('op');docu
 function saveTask(){
   const title=document.getElementById('fti').value.trim();if(!title){alert('Введите название');return;}
   const subs=editSubs.filter(s=>s.t&&s.t.trim()).map(s=>({t:s.t.trim(),done:s.done}));
-  const cat=document.getElementById('fca').value,prio=document.getElementById('fpr').value,date=document.getElementById('fdt').value||TODAY;
-  if(editId){const t=tasks.find(x=>x.id===editId),os=t.subs;Object.assign(t,{title,cat,prio,date,subs:subs.map((s,i)=>({t:s.t,done:os[i]?os[i].done:false}))});}
+  const cat=document.getElementById('fca').value,prio=document.getElementById('fpr').value,date=document.getElementById('fdt').value||TODAY,stage=document.getElementById('fstage')?.value||'new';
+  if(editId){const t=tasks.find(x=>x.id===editId),os=t.subs;Object.assign(t,{title,cat,prio,date,stage,subs:subs.map((s,i)=>({...os[i],...s,t:s.t,done:os[i]?os[i].done:false}))});}
   else{const usedN=new Set(tasks.filter(t=>t.num).map(t=>t.num));const nN=usedN.size?Math.max(...usedN)+1:1;
-  tasks.push({id:Date.now(),num:nN,title,cat,prio,date,done:false,exp:false,subs,aiH:[]});}
+  tasks.push({id:Date.now(),num:nN,title,cat,prio,date,stage:stage||'new',done:false,exp:false,subs,aiH:[]});}
   saveData();closeForm();render();
   toastSuccess(editId?'Задача обновлена':'Задача добавлена','');
 }
@@ -1264,13 +1414,23 @@ async function sendAI(){
 
 // ── ANALYTICS ──
 function renderA(){
-  const cats=['k','a','b','m'],cc={k:'#1D9E75',a:'#BA7517',b:'#378ADD',m:'#7F77DD'};
-  const cd=cats.map(c=>({n:catN[c],tot:tasks.filter(t=>t.cat===c).length,done:tasks.filter(t=>t.cat===c&&t.done).length,c:cc[c]}));
+  const allC=allCats();const cats=allC.map(c=>c.id);const COLORS=['#1D9E75','#BA7517','#378ADD','#7F77DD','#E24B4A','#2A5E10','#E65100','#6A1B9A'];const cc={};allC.forEach((c,i)=>{cc[c.id]=COLORS[i%COLORS.length];});
+  const cd=cats.map(c=>({n:catName(c),tot:tasks.filter(t=>t.cat===c).length,done:tasks.filter(t=>t.cat===c&&t.done).length,c:cc[c]}));
   const mt=Math.max(...cd.map(d=>d.tot),1);
   const pd=[{n:'Высокий',c:tasks.filter(t=>t.prio==='h').length,cl:'#E24B4A'},{n:'Средний',c:tasks.filter(t=>t.prio==='mid').length,cl:'#BA7517'},{n:'Низкий',c:tasks.filter(t=>t.prio==='l').length,cl:'#3B6D11'}];
   const mp=Math.max(...pd.map(d=>d.c),1);
   const tD=tasks.filter(t=>t.done).length,tA=tasks.length,op=tA?Math.round(tD/tA*100):0;
-  return`<div class="pc"><div class="pt"><span class="pl">Прогресс</span><span class="pp">${op}%</span></div>
+  const byStage=[
+    {l:'🆕 Новая',c:tasks.filter(t=>getStage(t)==='new').length,cl:'#1251A0'},
+    {l:'⚡ В работе',c:tasks.filter(t=>getStage(t)==='work').length,cl:'#0A5E3F'},
+    {l:'⏸ Отложена',c:tasks.filter(t=>getStage(t)==='hold').length,cl:'#8A5500'},
+    {l:'✅ Завершена',c:tasks.filter(t=>t.done).length,cl:'#2A5E10'},
+  ];
+  const mst=Math.max(...byStage.map(d=>d.c),1);
+  return`<div class="a-card"><div class="a-title">По статусам</div>
+    ${byStage.map(d=>`<div class="a-row"><div class="a-lbl">${d.l}</div><div class="a-bar"><div class="a-fill" style="width:${Math.round(d.c/mst*100)}%;background:${d.cl}"></div></div><div class="a-cnt">${d.c}</div></div>`).join('')}
+  </div>
+  <div class="pc"><div class="pt"><span class="pl">Прогресс</span><span class="pp">${op}%</span></div>
     <div class="pb"><div class="pf" style="width:${op}%"></div></div>
     <div class="sg">
       <div class="sst"><div class="sv">${tA-tD}</div><div class="sl">Активных</div></div>
@@ -2005,6 +2165,385 @@ function closeTagPicker(){
   _tpTaskId=null;_tpMode=null;
 }
 
+
+// ── CUSTOM CATEGORIES ──
+const DEFAULT_CATS = [
+  {id:'k',name:'Колбаса',emoji:'🥩',cls:'ck-k'},
+  {id:'a',name:'Лакомства',emoji:'🐾',cls:'ck-a'},
+  {id:'b',name:'Битрикс',emoji:'💼',cls:'ck-b'},
+  {id:'m',name:'Маркетинг',emoji:'📱',cls:'ck-m'},
+];
+const COLOR_CLS = ['ck-c0','ck-c1','ck-c2','ck-c3','ck-c4','ck-c5','ck-c6','ck-c7'];
+
+let customCats = [];
+
+function loadCats() {
+  const raw = tryLS(()=>localStorage.getItem('mk_cats'), null);
+  if(raw) try { customCats = JSON.parse(raw); } catch(e) { customCats = []; }
+}
+function saveCats() { tryLS(()=>localStorage.setItem('mk_cats', JSON.stringify(customCats))); }
+
+function allCats() { return [...DEFAULT_CATS, ...customCats]; }
+
+function catById(id) {
+  return allCats().find(c=>c.id===id) || {id,name:id,emoji:'📌',cls:'ck-c0'};
+}
+
+function catCssClass(id) { return catById(id).cls || 'ck-c0'; }
+function catLabel(id) { const c=catById(id); return c.emoji+' '+c.name; }
+function catName(id) { return catById(id).name; }
+
+function addCustomCat() {
+  const emoji = document.getElementById('new-cat-emoji').value.trim() || '📌';
+  const name = document.getElementById('new-cat-name').value.trim();
+  if(!name) { alert('Введи название'); return; }
+  const id = 'c' + Date.now();
+  const cls = COLOR_CLS[customCats.length % COLOR_CLS.length];
+  customCats.push({id, name, emoji, cls});
+  saveCats();
+  renderCatList();
+  document.getElementById('new-cat-name').value = '';
+  document.getElementById('new-cat-emoji').value = '';
+  render();
+  toastSuccess('Категория добавлена', emoji + ' ' + name);
+}
+
+function delCustomCat(id) {
+  if(!confirm('Удалить категорию?')) return;
+  customCats = customCats.filter(c=>c.id!==id);
+  saveCats();
+  renderCatList();
+  render();
+}
+
+function renderCatList() {
+  const el = document.getElementById('cat-list');
+  if(!el) return;
+  const all = allCats();
+  el.innerHTML = all.map(c => `
+    <div class="cat-manage-item">
+      <div class="cat-color-dot ${c.cls}">${c.emoji}</div>
+      <div class="cat-manage-name">${c.name}</div>
+      ${DEFAULT_CATS.find(d=>d.id===c.id) ? '<div style="width:28px"></div>' :
+        `<button class="cat-del-btn" onclick="delCustomCat('${c.id}')">✕</button>`}
+    </div>`).join('');
+}
+
+function openCatMgr() {
+  renderCatList();
+  document.getElementById('catmgrbg').classList.add('op');
+  document.getElementById('catmgrol').classList.add('op');
+}
+function closeCatMgr() {
+  document.getElementById('catmgrbg').classList.remove('op');
+  document.getElementById('catmgrol').classList.remove('op');
+}
+
+// ── TASK STAGES ──
+const STAGES = {
+  'new':  {l:'🆕 Новая',    cls:'stage-new'},
+  'work': {l:'⚡ В работе', cls:'stage-work'},
+  'hold': {l:'⏸ Отложена', cls:'stage-hold'},
+  'done2':{l:'✅ Завершена', cls:'stage-done'},
+};
+
+let _stageTaskId = null;
+function openStagePicker(id, el) {
+  _stageTaskId = id;
+  const picker = document.getElementById('stage-picker');
+  const bg = document.getElementById('stage-picker-bg');
+  const r = el.getBoundingClientRect();
+  const W = window.innerWidth;
+  picker.style.left = Math.min(r.left, W-175) + 'px';
+  picker.style.top = (r.bottom + 6) + 'px';
+  picker.classList.add('show');
+  bg.style.display = 'block';
+}
+function closeStagePicker() {
+  document.getElementById('stage-picker').classList.remove('show');
+  document.getElementById('stage-picker-bg').style.display = 'none';
+  _stageTaskId = null;
+}
+function applyStage(stage) {
+  const t = tasks.find(x=>x.id===_stageTaskId);
+  if(!t) return;
+  t.stage = stage;
+  if(stage==='done2') { t.done=true; t.subs.forEach(s=>s.done=true); }
+  else t.done = false;
+  saveData(); render(); closeStagePicker();
+  toastInfo('Статус: ' + STAGES[stage].l, '');
+}
+function getStage(t) { return t.stage || (t.done?'done2':'new'); }
+
+// ── SUBTASK COMMENTS & TAGS ──
+let _subExpanded = {}; // taskId_subIdx -> bool
+
+function toggleSubExt(tid, si) {
+  const key = tid+'_'+si;
+  _subExpanded[key] = !_subExpanded[key];
+  render();
+}
+
+function addSubComment(tid, si) {
+  const inp = document.getElementById(`sc-in-${tid}-${si}`);
+  const text = inp ? inp.value.trim() : '';
+  if(!text) return;
+  const t = tasks.find(x=>x.id===tid);
+  if(!t) return;
+  if(!t.subs[si].comments) t.subs[si].comments = [];
+  t.subs[si].comments.push({text, time: Date.now()});
+  inp.value = '';
+  saveData(); render();
+  // Re-expand
+  _subExpanded[tid+'_'+si] = true;
+}
+
+function delSubComment(tid, si, ci) {
+  const t = tasks.find(x=>x.id===tid);
+  if(!t) return;
+  t.subs[si].comments.splice(ci, 1);
+  saveData(); render();
+  _subExpanded[tid+'_'+si] = true;
+}
+
+function addSubTag(tid, si) {
+  const tag = prompt('Тег (без пробелов):');
+  if(!tag || !tag.trim()) return;
+  const t = tasks.find(x=>x.id===tid);
+  if(!t) return;
+  if(!t.subs[si].tags) t.subs[si].tags = [];
+  const clean = tag.trim().replace(/\s+/g,'_');
+  if(!t.subs[si].tags.includes(clean)) t.subs[si].tags.push(clean);
+  saveData(); render();
+  _subExpanded[tid+'_'+si] = true;
+}
+
+function delSubTag(tid, si, tag) {
+  const t = tasks.find(x=>x.id===tid);
+  if(!t) return;
+  t.subs[si].tags = (t.subs[si].tags||[]).filter(tg=>tg!==tag);
+  saveData(); render();
+  _subExpanded[tid+'_'+si] = true;
+}
+
+function fmtTime(ts) {
+  return new Date(ts).toLocaleString('ru',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+}
+
+
+// ── CALENDAR ──
+const MONTHS_RU=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const WD_RU=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const STAGE_COLORS={'new':'#1251A0','work':'#0A5E3F','hold':'#8A5500','done2':'#2A5E10'};
+
+function renderCalendar() {
+  const mc = document.getElementById('main');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = fmt(today);
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay = new Date(calYear, calMonth+1, 0);
+  // Start from Monday
+  let startDow = firstDay.getDay(); if(startDow===0) startDow=7;
+  const startDate = new Date(firstDay); startDate.setDate(startDate.getDate()-(startDow-1));
+
+  // Build date->tasks map
+  const tasksByDate = {};
+  tasks.forEach(t => {
+    if(!t.date) return;
+    if(!tasksByDate[t.date]) tasksByDate[t.date] = [];
+    tasksByDate[t.date].push(t);
+  });
+
+  let h = `<div class="cal-toggle">
+    <button class="cal-toggle-btn${!calMode?' on':''}" onclick="setCalMode(false)">📋 Список</button>
+    <button class="cal-toggle-btn${calMode?' on':''}" onclick="setCalMode(true)">📅 Календарь</button>
+  </div>`;
+
+  if(!calMode) { renderList(); return; }
+
+  h += `<div class="cal-header">
+    <button class="cal-nav" onclick="calNav(-1)">‹</button>
+    <div class="cal-month">${MONTHS_RU[calMonth]} ${calYear}</div>
+    <button class="cal-nav" onclick="calNav(1)">›</button>
+  </div>
+  <div class="cal-grid">
+    <div class="cal-weekdays">${WD_RU.map(d=>`<div class="cal-wd">${d}</div>`).join('')}</div>
+    <div class="cal-days">`;
+
+  const cur = new Date(startDate);
+  for(let i=0; i<42; i++) {
+    const dStr = fmt(cur);
+    const isToday = dStr===todayStr;
+    const isOtherMonth = cur.getMonth()!==calMonth;
+    const isSel = dStr===calSelDate;
+    const dayTasks = tasksByDate[dStr]||[];
+    const dots = dayTasks.slice(0,6).map(t=>{
+      const col=STAGE_COLORS[getStage(t)]||'#8E8E93';
+      return `<div class="cal-dot" style="background:${col}"></div>`;
+    }).join('');
+    h += `<div class="cal-day${isToday?' today':''}${isOtherMonth?' other-month':''}${isSel?' selected':''}" onclick="selectCalDay('${dStr}')">
+      <div class="cal-dn">${cur.getDate()}</div>
+      <div class="cal-dots">${dots}</div>
+    </div>`;
+    cur.setDate(cur.getDate()+1);
+    if(i===41) break;
+  }
+  h += '</div></div>';
+
+  // Selected day tasks
+  if(calSelDate) {
+    const selTasks = tasksByDate[calSelDate]||[];
+    const selD = new Date(calSelDate+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'long',weekday:'long'});
+    h += `<div class="cal-day-tasks">
+      <div class="cal-day-title">📅 ${selD}${selTasks.length?` · ${selTasks.length} задач`:' · нет задач'}</div>`;
+    if(selTasks.length) {
+      selTasks.forEach(t => {
+        const stage=getStage(t);const si=STAGES[stage]||STAGES['new'];
+        h += `<div class="cal-task-row" onclick="calOpenTask(${t.id})">
+          <div class="ck${t.done?' on':''}" onclick="event.stopPropagation();tTask(${t.id})" style="flex-shrink:0">✓</div>
+          <div class="cal-task-info">
+            <div class="cal-task-name"><span class="num-chip">[No ${t.num}]</span>${t.title}</div>
+            <div class="cal-task-chips">
+              <span class="${si.cls} stage-chip" style="font-size:10px;padding:2px 7px">${si.l}</span>
+              <span class="ch ${catCssClass(t.cat)}" style="font-size:10px">${catName(t.cat)}</span>
+              <span class="ch ${prioCls[t.prio]}" style="font-size:10px">${prioN[t.prio]}</span>
+            </div>
+          </div>
+          <span style="color:var(--text3);font-size:20px">›</span>
+        </div>`;
+      });
+    } else {
+      h += `<div style="padding:16px 14px;font-size:14px;color:var(--text3)">Нажми + чтобы добавить задачу на этот день</div>`;
+    }
+    h += '</div>';
+  }
+
+  mc.innerHTML = h;
+}
+
+function setCalMode(on) {
+  calMode=on;
+  if(on){calYear=new Date().getFullYear();calMonth=new Date().getMonth();calSelDate=TODAY;}
+  renderCalendar();
+}
+
+function calNav(dir) {
+  calMonth+=dir;
+  if(calMonth<0){calMonth=11;calYear--;}
+  if(calMonth>11){calMonth=0;calYear++;}
+  renderCalendar();
+}
+
+function selectCalDay(d) { calSelDate=d; renderCalendar(); }
+
+function calOpenTask(id) {
+  // Go to task in list view
+  calMode=false;
+  curV='all';
+  ['today','all','analytics'].forEach(x=>{const el=document.getElementById('nb-'+x);if(el)el.classList.toggle('on',x==='all');});
+  renderList();
+  setTimeout(()=>{
+    const el=document.getElementById('tc-'+id);
+    if(el)el.scrollIntoView({behavior:'smooth',block:'center'});
+  },200);
+}
+
+function renderList() {
+  const mc=document.getElementById('main');
+  const list=getVT();
+  const tot=tasks.length,dn=tasks.filter(t=>t.done).length,pct=tot?Math.round(dn/tot*100):0;
+  document.getElementById('hs').textContent=`${dn} из ${tot} · ${pct}%`;
+  updateInboxBadge&&updateInboxBadge();
+
+  let h=`<div class="cal-toggle">
+    <button class="cal-toggle-btn on">📋 Список</button>
+    <button class="cal-toggle-btn" onclick="setCalMode(true)">📅 Календарь</button>
+  </div>`;
+
+  const urg=tasks.filter(t=>!t.done&&t.prio==='h').length,ovr=tasks.filter(t=>isOv(t)).length;
+  h+=`<div class="pc"><div class="pt"><span class="pl">${curV==='today'?'Сегодня':'Все задачи'}</span><span class="pp">${pct}%</span></div>
+    <div class="pb"><div class="pf" style="width:${pct}%"></div></div>
+    <div class="sg">
+      <div class="sst"><div class="sv">${tot-dn}</div><div class="sl">Активных</div></div>
+      <div class="sst"><div class="sv">${dn}</div><div class="sl">Готово</div></div>
+      <div class="sst"><div class="sv" style="color:${urg?'var(--red)':'var(--text)'}">${urg}</div><div class="sl">Срочных</div></div>
+      <div class="sst"><div class="sv" style="color:${ovr?'var(--red)':'var(--text)'}">${ovr}</div><div class="sl">Просрочено</div></div>
+    </div></div>`;
+
+  if(curV==='all'&&(drFrom||drTo)){
+    const f=drFrom?new Date(drFrom+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+    const t2=drTo?new Date(drTo+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'short'}):'';
+    h+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:var(--teal-l);border-radius:12px"><span style="font-size:13px;color:var(--teal-d);flex:1">📅 ${f||'Начало'} — ${t2||'Конец'}</span><button onclick="clearDR()" style="background:none;border:none;color:var(--teal-d);font-size:13px;cursor:pointer;font-weight:600">✕ Сбросить</button></div>`;
+  }
+
+  if(!list.length){h+='<div class="emp">Задач нет<br><span style="font-size:13px">Нажми + чтобы добавить</span></div>';mc.innerHTML=h;return;}
+
+  // Group by date
+  if(curV==='all') {
+    const groups={};
+    list.forEach(t=>{const k=t.date||'Без даты';if(!groups[k])groups[k]=[];groups[k].push(t);});
+    const sorted=Object.keys(groups).sort((a,b)=>{if(a==='Без даты')return 1;if(b==='Без даты')return-1;return a<b?-1:1;});
+    sorted.forEach(date=>{
+      const label=date==='Без даты'?'📌 Без даты':
+        date===TODAY?'📅 Сегодня':
+        date===TOM?'📅 Завтра':
+        '📅 '+new Date(date+'T12:00:00').toLocaleDateString('ru',{day:'numeric',month:'long'});
+      h+=`<div class="slbl">${label} · ${groups[date].length}</div>`;
+      groups[date].forEach(t=>{ h+=tcHTML(t).replace('<div class="tc','<div id="tc-'+t.id+'" class="tc'); });
+    });
+  } else {
+    const act=list.filter(t=>!t.done),don=list.filter(t=>t.done);
+    if(act.length)h+=`<div class="slbl">Активные · ${act.length}</div>`+act.map(t=>tcHTML(t).replace('<div class="tc','<div id="tc-'+t.id+'" class="tc')).join('');
+    if(don.length)h+=`<div class="slbl">Выполнено · ${don.length}</div>`+don.map(t=>tcHTML(t).replace('<div class="tc','<div id="tc-'+t.id+'" class="tc')).join('');
+  }
+  mc.innerHTML=h;
+}
+
+// ── DOUBLE TAP on "Все" ──
+let _allLastTap=0;
+function handleAllClick(){
+  const now=Date.now();
+  if(now-_allLastTap<400){openDR();_allLastTap=0;return;}
+  _allLastTap=now;
+  calMode=false;sv('all');
+}
+
+// ── MOVE SUBTASK ──
+let _moveSub={tid:null,si:null};
+function openMoveSubOl(tid,si){
+  _moveSub={tid,si};
+  const t=tasks.find(x=>x.id===tid);
+  const sub=t?.subs[si];
+  if(!sub)return;
+  const others=tasks.filter(x=>x.id!==tid);
+  const el=document.getElementById('move-sub-list');
+  if(el){
+    el.innerHTML=`<div style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase">Подзадача: "${sub.t}"</div>`+
+    others.map(x=>`
+      <div class="move-sub-item" onclick="doMoveSub(${x.id})">
+        <span class="move-sub-num">[No ${x.num}]</span>
+        <span class="move-sub-title">${x.title}</span>
+        <span style="color:var(--text3)">›</span>
+      </div>`).join('');
+  }
+  document.getElementById('movesubbg').classList.add('op');
+  document.getElementById('move-sub-ol').classList.add('op');
+}
+function closeMoveSubOl(){
+  document.getElementById('movesubbg').classList.remove('op');
+  document.getElementById('move-sub-ol').classList.remove('op');
+  _moveSub={tid:null,si:null};
+}
+function doMoveSub(targetId){
+  const src=tasks.find(x=>x.id===_moveSub.tid);
+  const dst=tasks.find(x=>x.id===targetId);
+  if(!src||!dst)return;
+  const [sub]=src.subs.splice(_moveSub.si,1);
+  dst.subs.push(sub);
+  saveData();render();closeMoveSubOl();
+  toastSuccess('Подзадача перемещена','→ [No '+dst.num+'] '+dst.title);
+}
+
 // ── VK API ──
 let vkToken = '';
 const VK_GID = '238718596';
@@ -2290,6 +2829,7 @@ function speakText(text) {
 
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
+try{loadCats();}catch(e){}
 try{loadSyncSettings();if(ghToken)setTimeout(syncLoad,2000);}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
@@ -2370,6 +2910,40 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 <div id="tag-picker">
   <div class="tag-picker-title" id="tp-title">Категория</div>
   <div class="tag-picker-opts" id="tp-opts"></div>
+</div>
+
+
+<!-- Stage Picker -->
+<div id="stage-picker-bg" onclick="closeStagePicker()" style="position:fixed;inset:0;z-index:199;display:none"></div>
+<div id="stage-picker">
+  <button class="stage-pick-opt stage-new" onclick="applyStage('new')">🆕 Новая</button>
+  <button class="stage-pick-opt stage-work" onclick="applyStage('work')">⚡ В работе</button>
+  <button class="stage-pick-opt stage-hold" onclick="applyStage('hold')">⏸ Отложена</button>
+  <button class="stage-pick-opt stage-done" onclick="applyStage('done2')">✅ Завершена</button>
+</div>
+
+<!-- Category Manager -->
+<div class="obg" id="catmgrbg" onclick="closeCatMgr()"></div>
+<div class="ov" id="catmgrol" style="max-height:80vh">
+  <div class="dp"></div>
+  <div class="ol-hdr"><span style="font-size:20px">🏷</span><div class="ol-title">Мои категории</div><button class="ol-close" onclick="closeCatMgr()">✕</button></div>
+  <div style="flex:1;overflow-y:auto">
+    <div id="cat-list"></div>
+    <div class="add-cat-row">
+      <input class="add-cat-in" id="new-cat-emoji" placeholder="🍖" style="width:52px;flex:none;text-align:center">
+      <input class="add-cat-in" id="new-cat-name" placeholder="Название категории...">
+      <button class="add-cat-btn" onclick="addCustomCat()">+</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Move Subtask Overlay -->
+<div class="obg" id="movesubbg" onclick="closeMoveSubOl()"></div>
+<div class="ov" id="move-sub-ol">
+  <div class="dp"></div>
+  <div class="ol-hdr"><span style="font-size:20px">↗️</span><div class="ol-title">Переместить в задачу</div><button class="ol-close" onclick="closeMoveSubOl()">✕</button></div>
+  <div style="flex:1;overflow-y:auto" id="move-sub-list"></div>
 </div>
 
 </body>
