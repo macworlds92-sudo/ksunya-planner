@@ -1984,6 +1984,12 @@ let _sbPollTimer = null;
 let _sbSaving = false;
 let _sbLastRemote = 0;
 
+// GET: minimal headers (no preflight)
+const sbHGet = {
+  'apikey': SB_KEY,
+  'Authorization': 'Bearer ' + SB_KEY
+};
+// POST: full headers
 const sbH = {
   'apikey': SB_KEY,
   'Authorization': 'Bearer ' + SB_KEY,
@@ -1997,7 +2003,7 @@ function loadSyncSettings() {
 }
 
 function setSyncStatus(state, msg) {
-  if (!sbSyncKey && state === 'err') return;
+  if (!sbSyncKey) return; // no key - never show sync status
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-lbl');
   const bar = document.getElementById('sync-bar');
@@ -2041,7 +2047,7 @@ async function sbLoad(silent, force) {
   try {
     const r = await fetch(
       SB_URL + '/rest/v1/' + SB_TABLE + '?key=eq.' + encodeURIComponent(sbSyncKey) + '&select=data',
-      { headers: sbH, cache: 'no-store' }
+      { headers: sbHGet, cache: 'no-store' }
     );
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const rows = await r.json();
