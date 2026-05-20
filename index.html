@@ -3580,15 +3580,6 @@ function initViewSwipes() {
     }
   }, {passive: true});
 }
-// Double tap: open form
-    doubleTapFn && doubleTapFn();
-    _navTapTimes[view] = 0;
-  } else {
-    _navTapTimes[view] = now;
-    sv(view);
-  }
-}
-
 // ── UPDATE NAV BADGES ──
 function updateNavBadges() {
   // Tasks: active (not done)
