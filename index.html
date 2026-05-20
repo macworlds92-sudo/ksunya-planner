@@ -458,6 +458,42 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .os-delivery{background:#EDE8FC;color:#4A44A0}
 .os-done{background:#E8F5E1;color:#2A5E10}
 .os-cancelled{background:#FCE4E4;color:#992020}
+
+/* ── WAREHOUSE ── */
+.wh-screen{position:fixed;inset:0;background:var(--bg);z-index:70;display:flex;flex-direction:column;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1)}
+.wh-screen.open{transform:translateY(0)}
+.wh-hdr{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,44px)+12px) 14px 12px;background:var(--card);border-bottom:0.5px solid var(--border2)}
+.wh-title{flex:1;font-size:17px;font-weight:700;color:var(--text)}
+.wh-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px}
+.wh-item{background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.wh-item-info{flex:1}
+.wh-item-name{font-size:15px;font-weight:600;color:var(--text)}
+.wh-item-meta{font-size:12px;color:var(--text3);margin-top:2px}
+.wh-qty-ctrl{display:flex;align-items:center;gap:8px}
+.wh-qty-btn{width:30px;height:30px;border-radius:8px;border:none;background:var(--bg);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.wh-qty-val{font-size:16px;font-weight:700;color:var(--text);min-width:40px;text-align:center}
+.wh-qty-val.low{color:var(--red)}
+.wh-add-form{background:var(--card);border-radius:14px;padding:14px;margin-bottom:12px}
+.wh-add-title{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:10px}
+.wh-add-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.wh-add-in{flex:1;min-width:100px;border:1.5px solid var(--border2);border-radius:10px;padding:8px 12px;font-size:14px;background:var(--bg);color:var(--text);outline:none}
+.wh-add-in:focus{border-color:var(--teal)}
+.wh-del-btn{background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:4px}
+
+/* Warehouse picker popup */
+#wh-picker{position:fixed;inset:0;z-index:300;display:none;flex-direction:column}
+#wh-picker.show{display:flex}
+#wh-picker-bg{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+#wh-picker-card{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:20px 20px 0 0;padding:0 0 calc(env(safe-area-inset-bottom,0px)+20px);max-height:70vh;display:flex;flex-direction:column}
+.wh-picker-hdr{display:flex;align-items:center;padding:16px 16px 8px;border-bottom:0.5px solid var(--border2)}
+.wh-picker-title{flex:1;font-size:16px;font-weight:700;color:var(--text)}
+.wh-picker-list{overflow-y:auto;-webkit-overflow-scrolling:touch}
+.wh-picker-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--border2);cursor:pointer}
+.wh-picker-item:active{background:var(--bg)}
+.wh-picker-item-name{flex:1;font-size:15px;font-weight:500;color:var(--text)}
+.wh-picker-item-qty{font-size:13px;font-weight:700;padding:3px 10px;border-radius:10px;background:var(--bg)}
+.wh-picker-item-qty.low{color:var(--red)}
+.wh-picker-manual{padding:12px 16px;border-top:0.5px solid var(--border2)}
 </style>
 
 <!-- Supabase: direct REST + WebSocket -->
@@ -2108,6 +2144,8 @@ async function gistSave() {
       tasks: tasks.map(t => ({...t, aiH: []})),
       links: quickLinks,
       customCats: customCats,
+      orders: orders,
+      warehouse: warehouse,
       savedAt: now
     };
     const h = { 'Authorization': 'token ' + ghToken, 'Content-Type': 'application/json' };
@@ -2728,6 +2766,7 @@ function renderOrdForm(o) {
       <input class="ord-prod-name" placeholder="Наименование" value="${p.name||''}" oninput="ordProducts[${i}].name=this.value">
       <input class="ord-prod-qty" type="number" min="1" placeholder="Кол" value="${p.qty||1}" oninput="ordProducts[${i}].qty=+this.value;updateOrdTotals()">
       <input class="ord-prod-price" type="number" placeholder="₽" value="${p.price||''}" oninput="ordProducts[${i}].price=+this.value;updateOrdTotals()">
+      <button class="wh-qty-btn" style="background:var(--teal);color:#fff;font-size:12px;width:28px;height:28px" onclick="openWhPicker(${i})" title="Со склада">📦</button>
       <button class="ord-prod-del" onclick="ordDelProduct(${i})">✕</button>
     </div>`).join('');
 
@@ -2848,6 +2887,7 @@ function renderOrders() {
   let h = `<div class="cal-toggle">
     <button class="cal-toggle-btn${!ordCalMode?' on':''}" onclick="setOrdCalMode(false)">📋 Список</button>
     <button class="cal-toggle-btn${ordCalMode?' on':''}" onclick="setOrdCalMode(true)">📅 Календарь</button>
+    <button class="cal-toggle-btn" onclick="openWarehouse()" style="background:var(--bg);color:var(--text);flex:none;padding:8px 12px">🏪</button>
     <button class="cal-toggle-btn" onclick="openOrdForm()" style="background:var(--teal);color:#fff;flex:none;padding:8px 14px">+ Заказ</button>
   </div>`;
 
@@ -3014,6 +3054,179 @@ function renderOrdCalendar(filtered) {
 
 function ordCalNav(d){ ordCalMonth+=d; if(ordCalMonth<0){ordCalMonth=11;ordCalYear--;} if(ordCalMonth>11){ordCalMonth=0;ordCalYear++;} renderOrders(); }
 function ordSelDay(d){ ordCalSelDate=d; renderOrders(); }
+
+
+// ── WAREHOUSE MODULE ──
+let warehouse = [];
+let _whPickerIdx = null; // which product row triggered picker
+
+function loadWarehouse() {
+  const raw = tryLS(() => localStorage.getItem('mk_warehouse'), null);
+  if (raw) try { warehouse = JSON.parse(raw); } catch(e) { warehouse = []; }
+}
+function saveWarehouse() {
+  tryLS(() => localStorage.setItem('mk_warehouse', JSON.stringify(warehouse)));
+  scheduleSync();
+}
+
+// ── WAREHOUSE SCREEN ──
+function openWarehouse() {
+  renderWhScreen();
+  document.getElementById('wh-screen').classList.add('open');
+}
+function closeWarehouse() {
+  document.getElementById('wh-screen').classList.remove('open');
+}
+
+function renderWhScreen() {
+  const body = document.getElementById('wh-body');
+  if (!body) return;
+  
+  let h = `<div class="wh-add-form">
+    <div class="wh-add-title">Новый товар на склад</div>
+    <div class="wh-add-row">
+      <input class="wh-add-in" id="wh-new-name" placeholder="Название товара" style="flex:2">
+    </div>
+    <div class="wh-add-row">
+      <input class="wh-add-in" id="wh-new-qty" type="number" placeholder="Кол-во" min="0" step="0.1">
+      <input class="wh-add-in" id="wh-new-unit" placeholder="Ед. (кг, шт, л)" style="max-width:90px">
+      <input class="wh-add-in" id="wh-new-price" type="number" placeholder="Цена ₽" min="0">
+    </div>
+    <div class="wh-add-row">
+      <input class="wh-add-in" id="wh-new-min" type="number" placeholder="Мин. остаток (для предупреждения)" min="0" step="0.1">
+    </div>
+  </div>`;
+
+  if (!warehouse.length) {
+    h += '<div class="emp" style="margin-top:20px">Склад пуст<br><span style="font-size:13px">Добавь первый товар выше</span></div>';
+  } else {
+    const total = warehouse.reduce((s,w) => s + (+w.qty||0)*(+w.price||0), 0);
+    h += `<div style="background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--text3)">Всего на складе:</span>
+      <span style="font-size:16px;font-weight:800;color:var(--teal)">${total.toLocaleString('ru')} ₽</span>
+    </div>`;
+    warehouse.forEach(w => {
+      const low = w.minQty && (+w.qty) <= (+w.minQty);
+      h += `<div class="wh-item">
+        <div class="wh-item-info">
+          <div class="wh-item-name">${w.name}${low?` <span style="color:var(--red);font-size:11px">⚠️ мало</span>`:''}</div>
+          <div class="wh-item-meta">${w.price?w.price+' ₽/'+( w.unit||'ед.'):''}</div>
+        </div>
+        <div class="wh-qty-ctrl">
+          <button class="wh-qty-btn" onclick="whAdjust(${w.id},-1)">−</button>
+          <div class="wh-qty-val${low?' low':''}" onclick="whManualEdit(${w.id})">${(+w.qty||0)}${w.unit?' '+w.unit:''}</div>
+          <button class="wh-qty-btn" onclick="whAdjust(${w.id},1)">+</button>
+        </div>
+        <button class="wh-del-btn" onclick="whDelete(${w.id})">🗑</button>
+      </div>`;
+    });
+  }
+  body.innerHTML = h;
+}
+
+function saveWhItem() {
+  const name = document.getElementById('wh-new-name')?.value.trim();
+  if (!name) { alert('Введи название товара'); return; }
+  const qty = +(document.getElementById('wh-new-qty')?.value || 0);
+  const unit = document.getElementById('wh-new-unit')?.value.trim() || 'шт';
+  const price = +(document.getElementById('wh-new-price')?.value || 0);
+  const minQty = +(document.getElementById('wh-new-min')?.value || 0);
+  warehouse.push({ id: Date.now(), name, qty, unit, price, minQty });
+  saveWarehouse();
+  renderWhScreen();
+  // Clear fields
+  ['wh-new-name','wh-new-qty','wh-new-unit','wh-new-price','wh-new-min'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  toastSuccess('Товар добавлен', name);
+}
+
+function whAdjust(id, delta) {
+  const w = warehouse.find(x => x.id === id);
+  if (!w) return;
+  w.qty = Math.max(0, (+w.qty||0) + delta);
+  saveWarehouse();
+  renderWhScreen();
+}
+
+function whManualEdit(id) {
+  const w = warehouse.find(x => x.id === id);
+  if (!w) return;
+  const val = prompt(`Новое количество для "${w.name}":`, w.qty);
+  if (val === null) return;
+  const n = parseFloat(val);
+  if (isNaN(n) || n < 0) { alert('Введи корректное число'); return; }
+  w.qty = n;
+  saveWarehouse();
+  renderWhScreen();
+  toastSuccess('Количество обновлено', w.name + ': ' + n + ' ' + (w.unit||''));
+}
+
+function whDelete(id) {
+  if (!confirm('Удалить товар со склада?')) return;
+  warehouse = warehouse.filter(x => x.id !== id);
+  saveWarehouse();
+  renderWhScreen();
+}
+
+// ── WAREHOUSE PICKER (in order form) ──
+function openWhPicker(prodIdx) {
+  _whPickerIdx = prodIdx;
+  const list = document.getElementById('wh-picker-list');
+  if (!list) return;
+  
+  if (!warehouse.length) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text3)">Склад пуст.<br>Сначала добавь товары в 📦 → 🏪 Склад</div>`;
+  } else {
+    list.innerHTML = warehouse.map(w => {
+      const low = w.minQty && (+w.qty) <= (+w.minQty);
+      return `<div class="wh-picker-item" onclick="selectWhItem(${w.id})">
+        <div class="wh-picker-item-name">${w.name}</div>
+        <div class="wh-picker-item-qty${low?' low':''}">${(+w.qty||0)} ${w.unit||'шт'}</div>
+        ${w.price?`<div style="font-size:12px;font-weight:700;color:var(--teal)">${w.price} ₽</div>`:''}
+      </div>`;
+    }).join('');
+  }
+  
+  document.getElementById('wh-picker').classList.add('show');
+}
+
+function closeWhPicker(manual) {
+  document.getElementById('wh-picker').classList.remove('show');
+  _whPickerIdx = null;
+}
+
+function selectWhItem(whId) {
+  const w = warehouse.find(x => x.id === whId);
+  if (!w || _whPickerIdx === null) return;
+  const i = _whPickerIdx;
+  
+  // Ask how many to use
+  const need = prompt(`Сколько "${w.name}" нужно для заказа?\nНа складе: ${w.qty} ${w.unit||'шт'}`, 1);
+  if (need === null) { closeWhPicker(); return; }
+  const qty = parseFloat(need);
+  if (isNaN(qty) || qty <= 0) { alert('Введи корректное количество'); return; }
+  
+  // Check stock
+  if (qty > (+w.qty||0)) {
+    if (!confirm(`На складе только ${w.qty} ${w.unit||'шт'}. Продолжить?\n(Количество на складе уйдёт в минус)`)) {
+      closeWhPicker(); return;
+    }
+  }
+  
+  // Update product row in order form
+  ordProducts[i] = { name: w.name, qty: qty, price: w.price || 0, whId: whId, whQty: qty };
+  
+  // Deduct from warehouse
+  w.qty = Math.max(0, (+w.qty||0) - qty);
+  saveWarehouse();
+  
+  closeWhPicker();
+  const o = ordEditId ? orders.find(x=>x.id===ordEditId) : null;
+  renderOrdForm(o);
+  updateOrdTotals();
+  toastInfo(`${w.name}: ${w.qty} ${w.unit||'шт'} осталось`, '📦 Склад обновлён');
+}
 
 // ── VK API ──
 let vkToken = '';
@@ -3302,6 +3515,7 @@ dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
 try{loadCats();}catch(e){}
 try{loadOrders();}catch(e){}
+try{loadWarehouse();}catch(e){}
 try{loadSyncSettings();}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
@@ -3429,6 +3643,32 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
     <button class="tbt" onclick="saveOrder()" style="background:var(--teal);color:#fff;border-radius:10px;padding:6px 14px;font-size:14px;font-weight:700">Сохранить</button>
   </div>
   <div class="ord-form-body" id="ord-form-body"></div>
+</div>
+
+
+<!-- Warehouse Screen -->
+<div class="wh-screen" id="wh-screen">
+  <div class="wh-hdr">
+    <button class="ol-close" onclick="closeWarehouse()">✕</button>
+    <div class="wh-title">🏪 Склад</div>
+    <button onclick="saveWhItem()" style="background:var(--teal);color:#fff;border-radius:10px;padding:6px 14px;font-size:14px;font-weight:700;border:none;cursor:pointer">+ Добавить</button>
+  </div>
+  <div class="wh-body" id="wh-body"></div>
+</div>
+
+<!-- Warehouse Picker Popup -->
+<div id="wh-picker">
+  <div id="wh-picker-bg" onclick="closeWhPicker()"></div>
+  <div id="wh-picker-card">
+    <div class="wh-picker-hdr">
+      <div class="wh-picker-title">Выбрать со склада</div>
+      <button onclick="closeWhPicker()" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="wh-picker-list" id="wh-picker-list"></div>
+    <div class="wh-picker-manual">
+      <button onclick="closeWhPicker(true)" style="width:100%;padding:12px;border-radius:12px;border:1.5px dashed var(--border2);background:transparent;font-size:14px;font-weight:600;color:var(--text3);cursor:pointer">Ввести вручную (без склада)</button>
+    </div>
+  </div>
 </div>
 
 </body>
