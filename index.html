@@ -303,6 +303,14 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 .tag-picker-opt:active{opacity:.7;}
 #tag-picker-bg{position:fixed;inset:0;z-index:199;display:none;}
 #tag-picker-bg.show{display:block;}
+
+/* ── SYNC ── */
+.sync-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;flex-shrink:0}
+.sync-dot.ok{background:#1D9E75}.sync-dot.err{background:#E24B4A}.sync-dot.busy{background:#BA7517;animation:sp .7s linear infinite}
+#sync-bar{position:fixed;top:calc(env(safe-area-inset-top,44px) + 2px);right:16px;z-index:290;display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);opacity:0;transition:opacity .3s;pointer-events:none}
+#sync-bar.show{opacity:1}
+.sync-bar-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.sync-bar-dot.ok{background:#1D9E75}.sync-bar-dot.err{background:#E24B4A}.sync-bar-dot.busy{background:#BA7517;animation:sp .7s linear infinite}
 </style>
 </head>
 <body>
@@ -313,6 +321,7 @@ body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'S
 
 <div id="wrap">
   <div id="hdr">
+    <div id="sync-bar"><div class="sync-bar-dot" id="sync-dot"></div><span id="sync-lbl"></span></div>
     <div class="hdr-main">
       <div><div class="ht">❤️ Ксюша – Планнер</div><div class="hs" id="hs"></div></div>
       <div class="hb">
@@ -640,6 +649,8 @@ function defaultLinks(){
 }
 
 function saveData(){
+  tryLS(()=>localStorage.setItem('mk_saved_at',Date.now()));
+  scheduleSync&&scheduleSync();
   const s=tasks.map(t=>({...t,aiH:t.aiH.map(m=>{const c=Array.isArray(m.content)?m.content:[{type:'text',text:String(m.content||'')}];return{...m,content:c.map(x=>x.type==='image'?{type:'text',text:'[фото]'}:x)};})}));
   tryLS(()=>localStorage.setItem('mk_tasks',JSON.stringify(s)));
 }
@@ -678,7 +689,7 @@ function init(){
 
 // ── SETTINGS ──
 function openSett(){
-  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n\nНомер:');
+  const r=prompt('⚙️ Настройки:\n0 — 🧹 Сбросить кеш\n1 — API ключ Claude\n2 — Повторить обучение\n3 — Сбросить задачи\n4 — VK токен группы\n5 — 🔔 Напоминания\n6 — 🎤 Голосовой: '+(showVoiceFAB?'скрыть':'показать')+'\n7 — 🔄 Синхронизация'+(ghToken?' ✓':'')+'\n\nНомер:');
   if(r==='0'){
     if(confirm('Удалить кеш и перезагрузить?')){
       if('serviceWorker' in navigator){
@@ -696,6 +707,7 @@ function openSett(){
   else if(r==='2'){tryLS(()=>localStorage.removeItem('mk_ob'));showOb();}
   else if(r==='3'){if(confirm('Сбросить все задачи?')){tasks=initTasks();saveData();render();}}  else if(r==='5'){closeChoice&&closeChoice();openRemindSett();}
     else if(r==='6'){toggleVoiceFAB();}
+    else if(r==='7'){openSyncSett();}
   else if(r==='4'){const t=prompt('Токен сообщества ВКонтакте:\n(Группа → Управление → Работа с API → Ключи доступа):\n',vkToken||'');if(t!==null){vkToken=t.trim();tryLS(()=>localStorage.setItem('mk_vk_token',vkToken));vkSnap=null;alert(vkToken?'VK токен сохранён ✓':'VK токен удалён');}}
 }
 
@@ -2113,6 +2125,7 @@ function speakText(text) {
 
 dbgInf('App starting...');
 try{loadVKSettings();dbgOk('VK settings loaded');}catch(e){dbgErr('VK settings: '+e.message);}
+try{loadSyncSettings();if(ghToken)setTimeout(syncLoad,2000);}catch(e){}
 try{loadRSettings();dbgOk('Reminder settings loaded');}catch(e){dbgErr('Reminder settings: '+e.message);}
 try{init();}catch(e){dbgErr('INIT FAILED: '+e.message);document.getElementById('main').innerHTML='<div style="padding:24px 16px;text-align:center"><div style="font-size:36px;margin-bottom:10px">⚠️</div><div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Ошибка запуска</div><div style="font-size:12px;color:var(--text3);margin-bottom:16px">'+e.message+'</div><button onclick="location.reload()" style="padding:12px 20px;background:#1D9E75;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">↺ Перезагрузить</button></div>';}
 try{initSwipes();dbgOk('Swipes ready');}catch(e){dbgErr('Swipes: '+e.message);}
@@ -2195,4 +2208,141 @@ setTimeout(()=>{try{checkAndShowRemind(false);}catch(e){}},5000);
 </div>
 
 </body>
-</html>
+</html
+// ── GITHUB GIST SYNC ──
+let ghToken = '';
+let ghGistId = '';
+let _syncTimer = null;
+const GIST_FILE = 'ksunya-planner.json';
+
+function loadSyncSettings() {
+  ghToken = tryLS(() => localStorage.getItem('mk_gh_token') || '', '');
+  ghGistId = tryLS(() => localStorage.getItem('mk_gh_gist') || '', '');
+}
+
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-lbl');
+  const bar = document.getElementById('sync-bar');
+  if (!dot || !lbl || !bar) return;
+  dot.className = 'sync-bar-dot ' + state;
+  lbl.textContent = msg;
+  bar.classList.add('show');
+  clearTimeout(window._syncBarTimer);
+  if (state !== 'busy') {
+    window._syncBarTimer = setTimeout(() => bar.classList.remove('show'), 3000);
+  }
+}
+
+async function syncSave() {
+  if (!ghToken) return;
+  setSyncStatus('busy', 'Сохраняю...');
+  const data = {
+    tasks: tasks.map(t => ({...t, aiH: []})),
+    links: quickLinks,
+    savedAt: Date.now()
+  };
+  try {
+    const body = { files: { [GIST_FILE]: { content: JSON.stringify(data) } } };
+    let res;
+    if (ghGistId) {
+      res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+    } else {
+      res = await fetch('https://api.github.com/gists', {
+        method: 'POST',
+        headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...body, description: '❤️ Ксюша — Планнер', public: false })
+      });
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    ghGistId = d.id;
+    tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId));
+    setSyncStatus('ok', '✓ Синхронизировано');
+  } catch(e) {
+    setSyncStatus('err', '✗ Ошибка синхронизации');
+    console.log('Sync error:', e.message);
+  }
+}
+
+async function syncLoad() {
+  if (!ghToken || !ghGistId) return false;
+  setSyncStatus('busy', 'Загружаю...');
+  try {
+    const res = await fetch(`https://api.github.com/gists/${ghGistId}`, {
+      headers: { 'Authorization': `token ${ghToken}` }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    const content = d.files[GIST_FILE]?.content;
+    if (!content) throw new Error('Файл не найден');
+    const remote = JSON.parse(content);
+    
+    // Merge: take newer data
+    const localTime = tryLS(() => parseInt(localStorage.getItem('mk_saved_at') || '0'), 0);
+    if (remote.savedAt > localTime) {
+      tasks = remote.tasks || tasks;
+      tasks.forEach(t => { if (!t.aiH) t.aiH = []; });
+      if (remote.links) quickLinks = remote.links;
+      saveData();
+      render();
+      setSyncStatus('ok', '✓ Данные загружены');
+      toastSuccess('Синхронизация', 'Данные обновлены с другого устройства');
+      return true;
+    } else {
+      setSyncStatus('ok', '✓ Актуально');
+      return false;
+    }
+  } catch(e) {
+    setSyncStatus('err', '✗ Ошибка загрузки');
+    return false;
+  }
+}
+
+async function openSyncSett() {
+  const cur = ghToken ? '✓ Токен установлен' : 'Не настроено';
+  const action = prompt(`🔄 Синхронизация (GitHub Gist)\n\nСтатус: ${cur}\n\n1 — Ввести токен GitHub\n2 — Синхронизировать сейчас\n3 — Загрузить с другого устройства\n4 — Отключить синхронизацию\n\nНомер:`);
+  
+  if (action === '1') {
+    const tok = prompt('Токен GitHub (gist scope):\n\ngithub.com/settings/tokens → New token → ✅ gist → Generate\n\nВставь сюда:', ghToken);
+    if (tok !== null) {
+      ghToken = tok.trim();
+      ghGistId = ''; // reset gist id for new token
+      tryLS(() => localStorage.setItem('mk_gh_token', ghToken));
+      tryLS(() => localStorage.setItem('mk_gh_gist', ''));
+      if (ghToken) {
+        toastSuccess('Токен сохранён', 'Первая синхронизация...');
+        await syncSave();
+      }
+    }
+  } else if (action === '2') {
+    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
+    await syncSave();
+  } else if (action === '3') {
+    if (!ghToken) { toastError('Сначала введи токен GitHub', '⚙️ → 7 → 1'); return; }
+    if (!ghGistId) {
+      const id = prompt('ID синхронизации (с первого устройства):');
+      if (id) { ghGistId = id.trim(); tryLS(() => localStorage.setItem('mk_gh_gist', ghGistId)); }
+    }
+    await syncLoad();
+  } else if (action === '4') {
+    ghToken = ''; ghGistId = '';
+    tryLS(() => localStorage.removeItem('mk_gh_token'));
+    tryLS(() => localStorage.removeItem('mk_gh_gist'));
+    toastInfo('Синхронизация отключена', '');
+  }
+}
+
+// Auto-save on data change
+const _origSaveData = saveData;
+// Debounced sync after save
+function scheduleSync() {
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => { if(ghToken) syncSave(); }, 3000);
+}
+
+>
